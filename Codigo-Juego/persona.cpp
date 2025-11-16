@@ -9,7 +9,7 @@
 Persona::Persona(qreal w, qreal h,
                  qreal sceneWidth, qreal sceneHeight,
                  TipoMovimiento tipo)
-    : QGraphicsRectItem(-w/2, -h/2, w, h),
+    : QGraphicsRectItem(0, 0, w, h),
     tipoMovimiento(tipo),
     sceneW(sceneWidth),
     sceneH(sceneHeight)
@@ -32,7 +32,7 @@ Persona::Persona(qreal w, qreal h,
     QObject::connect(timer, &QTimer::timeout, this, &Persona::updateMovement);
     timer->start(16);
 
-    // Configurar el item para recibir eventos de teclado si es necesario, aunque la lógica esté en Jugador
+    // Configurar el item para recibir eventos de teclado si es necesario
     setFlag(QGraphicsItem::ItemIsFocusable);
 }
 
@@ -51,16 +51,10 @@ void Persona::setTipoMovimiento(TipoMovimiento tipo)
     }
 }
 
-// **handleInput() es ahora virtual y contiene la lógica base o se deja vacío**
 void Persona::handleInput()
 {
     // Las subclases (Jugador, Enemigo) sobrescribirán esta función
-    // para implementar la lógica de control o IA (salto, dirección, etc.).
-    // La lógica de salto ha sido eliminada de aquí.
 }
-
-// **keyPressEvent y keyReleaseEvent han sido eliminados de Persona**
-// Estas funciones DEBEN ser implementadas en la clase Jugador.
 
 void Persona::updateMovement()
 {
@@ -78,109 +72,156 @@ void Persona::updateMovementRectilineo()
 {
     double dx = 0.0, dy = 0.0;
 
-    // Usa las variables de control establecidas por handleInput()
     if (upPressed)     dy -= speed;
     if (downPressed)   dy += speed;
     if (leftPressed)   dx -= speed;
     if (rightPressed)  dx += speed;
 
+    // Si no hay movimiento, no hacer nada
+    if (dx == 0 && dy == 0) return;
+
+    double w = rect().width();
+    double h = rect().height();
+
+    // Guardar posición actual ANTES de mover
+    double prevX = x();
+    double prevY = y();
+
+    // Calcular nueva posición
     double newX = x() + dx;
     double newY = y() + dy;
 
-    double halfW = rect().width() / 2;
-    double halfH = rect().height() / 2;
-
     // Colisiones con los límites de la escena
-    if (newX < halfW) newX = halfW;
-    if (newX > sceneW - halfW) newX = sceneW - halfW;
-    if (newY < halfH) newY = halfH;
-    if (newY > sceneH - halfH) newY = sceneH - halfH;
+    // Permitir que llegue exactamente al borde (0 a sceneW-width)
+    if (newX < 0) newX = 0;
+    if (newX + w > sceneW) newX = sceneW - w;
+    if (newY < 0) newY = 0;
+    if (newY + h > sceneH) newY = sceneH - h;
 
+    // Aplicar movimiento
     setPos(newX, newY);
+
+    // Verificar colisiones con otros objetos (no consigo mismo)
+    QList<QGraphicsItem*> collisions = collidingItems();
+
+    for (QGraphicsItem* item : collisions) {
+        // Verificar si es un rectángulo diferente a este
+        if (item->type() == QGraphicsRectItem::Type) {
+            // Hay colisión con otro objeto, restaurar posición
+            setPos(prevX, prevY);
+            return;
+        }
+    }
 }
 
 void Persona::updateMovementConGravedad()
 {
-    double halfW = rect().width() / 2;
-    double halfH = rect().height() / 2;
+    double w = rect().width();
+    double h = rect().height();
 
+    // ========== FASE 1: MOVIMIENTO HORIZONTAL ==========
     double dx = 0.0;
-
-    // 1. Movimiento Horizontal (Input del usuario)
     if (leftPressed) dx -= speed;
     if (rightPressed) dx += speed;
 
-    setX(x() + dx);
+    if (dx != 0) {
+        double prevX = x();
+        setX(x() + dx);
 
-    // Colisiones con los límites de la escena (Horizontal)
-    if (x() < halfW) setX(halfW);
-    if (x() > sceneW - halfW) setX(sceneW - halfW);
+        // Límites horizontales de la escena
+        if (x() < 0) {
+            setX(0);
+        } else if (x() + w > sceneW) {
+            setX(sceneW - w);
+        } else {
+            // Solo verificar colisiones si no estamos en los bordes
+            QList<QGraphicsItem*> collisions = collidingItems();
+            for (QGraphicsItem* item : collisions) {
+                if (item->type() == QGraphicsRectItem::Type) {
+                    // Restaurar posición X anterior
+                    setX(prevX);
+                    break;
+                }
+            }
+        }
+    }
 
-    // 2. Resolver colisiones horizontales (Plataformas/Muros)
-    resolveCollisions(dx, 0.0);
+    // ========== FASE 2: MOVIMIENTO VERTICAL (GRAVEDAD) ==========
+    double prevY = y();
 
-    // 3. Movimiento Vertical (Gravedad y Salto)
+    // Aplicar gravedad
     vy += g;
-
     setY(y() + vy);
 
-    // 4. Colisiones con los límites de la escena (Vertical)
-    bool wasOnGround = onGround;
-    if (y() < halfH) { // Techo de la escena
-        setY(halfH);
+    // Asumir que no está en el suelo hasta que se demuestre lo contrario
+    onGround = false;
+
+    // Límite superior (techo)
+    if (y() < 0) {
+        setY(0);
         vy = 0.0;
     }
-
-    if (y() >= sceneH - halfH) { // Suelo de la escena
-        setY(sceneH - halfH);
+    // Límite inferior (suelo de la escena)
+    else if (y() + h > sceneH) {
+        setY(sceneH - h);
         vy = 0.0;
         onGround = true;
-    } else if (y() < sceneH - halfH && wasOnGround) {
-        onGround = false;
     }
+    else {
+        // Verificar colisiones verticales con otros objetos
+        QList<QGraphicsItem*> collisions = collidingItems();
 
-    // 5. Resolver colisiones verticales (Plataformas/Techos)
-    resolveCollisions(0.0, vy);
+        for (QGraphicsItem* item : collisions) {
+            if (item->type() != QGraphicsRectItem::Type) {
+                continue;
+            }
+
+            QRectF otherRect = item->sceneBoundingRect();
+            QRectF myRect = sceneBoundingRect();
+
+            // Detectar si estamos cayendo sobre otro objeto
+            if (vy > 0) {
+                // Cayendo hacia abajo
+                if (prevY + h <= otherRect.top() + 2) {
+                    // Estábamos arriba del objeto, ahora aterrizamos
+                    setY(otherRect.top() - h);
+                    vy = 0.0;
+                    onGround = true;
+                    break;
+                }
+            }
+            else if (vy < 0) {
+                // Subiendo (golpeando techo)
+                if (prevY >= otherRect.bottom() - 2) {
+                    // Estábamos abajo del objeto, golpeamos su parte inferior
+                    setY(otherRect.bottom());
+                    vy = 0.0;
+                    break;
+                }
+            }
+        }
+    }
 }
 
-void Persona::resolveCollisions(double dx, double dy)
+bool Persona::resolveCollisions(double dx, double dy)
 {
-    QList<QGraphicsItem*> collisions = collidingItems();
+    // Este método ya no se usa en la nueva implementación
+    // pero lo mantenemos por compatibilidad
+    return false;
+}
 
-    double halfW = rect().width() / 2;
-    double halfH = rect().height() / 2;
+bool Persona::resolveCollisionsHorizontal(double dx)
+{
+    // Este método ya no se usa en la nueva implementación
+    // pero lo mantenemos por compatibilidad
+    return false;
+}
 
-    for (QGraphicsItem* item : collisions) {
-        if (item == this || item->type() != QGraphicsRectItem::Type) {
-            continue;
-        }
-
-        QRectF otherRect = item->sceneBoundingRect();
-        QRectF myRect = sceneBoundingRect();
-
-        // Resolución de Colisión Horizontal
-        if (dx != 0.0) {
-            if (dx > 0.0 && myRect.right() > otherRect.left() && myRect.left() < otherRect.left()) {
-                setX(otherRect.left() - halfW);
-            }
-            else if (dx < 0.0 && myRect.left() < otherRect.right() && myRect.right() > otherRect.right()) {
-                setX(otherRect.right() + halfW);
-            }
-        }
-
-        // Resolución de Colisión Vertical
-        if (dy != 0.0) {
-            if (dy > 0.0 && myRect.bottom() > otherRect.top() && myRect.top() < otherRect.top()) {
-                setY(otherRect.top() - halfH);
-                vy = 0.0;
-                onGround = true;
-            }
-            else if (dy < 0.0 && myRect.top() < otherRect.bottom() && myRect.bottom() > otherRect.bottom()) {
-                setY(otherRect.bottom() + halfH);
-                vy = 0.0;
-            }
-        }
-    }
+bool Persona::resolveCollisionsVertical(double dy)
+{
+    // Este método ya no se usa en la nueva implementación
+    // pero lo mantenemos por compatibilidad
+    return false;
 }
 
 // ============ MÉTODOS DE COLISIÓN (Información) ============

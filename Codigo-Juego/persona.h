@@ -25,7 +25,6 @@ public:
     // Getters y Setters
     void setTipoMovimiento(TipoMovimiento tipo);
     TipoMovimiento getTipoMovimiento() const { return tipoMovimiento; }
-
     void setSpeed(qreal newSpeed) { speed = newSpeed; }
 
     // Métodos de Colisión
@@ -34,13 +33,13 @@ public:
     QList<Persona*> getCollidingPersonas();
 
 protected:
-    // **Virtual** para que Enemigo/Jugador pueda sobrescribir la lógica de input/IA
+    // Virtual para que Enemigo/Jugador pueda sobrescribir la lógica de input/IA
     virtual void handleInput();
 
 private slots:
     void updateMovement();
 
-protected: // <--- Acceso Protegido para Jugador y Enemigo
+protected:
     // Variables de Movimiento
     TipoMovimiento tipoMovimiento;
     qreal speed;
@@ -61,9 +60,10 @@ protected: // <--- Acceso Protegido para Jugador y Enemigo
     void updateMovementRectilineo();
     void updateMovementConGravedad();
 
-    void resolveCollisions(double dx, double dy);
-
-    // Eventos de teclado eliminados de Persona para ser manejados en Jugador.
+    // Funciones de resolución de colisiones
+    bool resolveCollisions(double dx, double dy);
+    bool resolveCollisionsHorizontal(double dx);   // AGREGAR ESTA LÍNEA
+    bool resolveCollisionsVertical(double dy);     // AGREGAR ESTA LÍNEA
 };
 
 #endif // PERSONA_H

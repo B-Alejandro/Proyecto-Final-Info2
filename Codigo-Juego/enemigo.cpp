@@ -28,8 +28,6 @@ Enemigo::Enemigo(qreal w, qreal h,
 
 void Enemigo::handleInput()
 {
-    // Este método se llama en cada frame
-    // Aquí puedes agregar lógica adicional de IA si es necesario
 
     // Intentar saltar aleatoriamente si tiene gravedad
     if (tipoMovimiento == TipoMovimiento::CON_GRAVEDAD && canJump) {
