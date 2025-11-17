@@ -9,27 +9,26 @@ class Enemigo : public Persona
     Q_OBJECT
 
 public:
-    Enemigo(qreal w, qreal h,
-            qreal sceneWidth, qreal sceneHeight,
-            TipoMovimiento tipo = TipoMovimiento::CON_GRAVEDAD);
-
-    // Configurar el comportamiento del enemigo
-    void setChangeDirectionInterval(int ms) { changeDirectionTime = ms; }
-    void setCanJump(bool can) { canJump = can; }
+    Enemigo(qreal w,
+            qreal h,
+            qreal sceneWidth,
+            qreal sceneHeight,
+            TipoMovimiento tipo);
 
 protected:
-    void handleInput() override;  // IA del enemigo
+    void handleInput() override;
 
 private slots:
     void changeDirection();
 
 private:
-    QTimer *aiTimer;
-    int changeDirectionTime;
-    bool canJump;
-
     void randomizeDirection();
     void tryJump();
+
+private:
+    QTimer* aiTimer;
+    int changeDirectionTime;
+    bool canJump;
 };
 
-#endif // ENEMIGO_H
+#endif

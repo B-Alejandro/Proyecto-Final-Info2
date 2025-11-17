@@ -1,8 +1,8 @@
 #ifndef PERSONA_H
 #define PERSONA_H
 
-#include <QGraphicsRectItem>
 #include <QObject>
+#include <QGraphicsRectItem>
 #include <QKeyEvent>
 
 class QTimer;
@@ -12,13 +12,21 @@ enum class TipoMovimiento {
     CON_GRAVEDAD
 };
 
+/*
+Clase Persona
+Representa un objeto rectangular que puede moverse con o sin gravedad.
+Toda la logica de colision esta delegada a la clase Fisica.
+*/
+
 class Persona : public QObject, public QGraphicsRectItem
 {
     Q_OBJECT
 
 public:
-    Persona(qreal w, qreal h,
-            qreal sceneWidth, qreal sceneHeight,
+    Persona(qreal w,
+            qreal h,
+            qreal sceneWidth,
+            qreal sceneHeight,
             TipoMovimiento tipo);
 
     void setTipoMovimiento(TipoMovimiento tipo);
@@ -26,20 +34,10 @@ public:
 
     void setSpeed(qreal newSpeed) { speed = newSpeed; }
 
-    bool checkCollisionWith(Persona* other);
-    bool checkCollisionBelow();
-    QList<Persona*> getCollidingPersonas();
-
 protected:
     virtual void handleInput();
 
-private slots:
-    void updateMovement();
-
-protected:
-    void updateMovementRectilineo();
-    void updateMovementConGravedad();
-
+    // Variables ahora protected para que las clases hijas puedan acceder
     TipoMovimiento tipoMovimiento;
     qreal sceneW;
     qreal sceneH;
@@ -49,12 +47,20 @@ protected:
     qreal g;
     bool onGround;
 
-    QTimer* timer;
-
     bool upPressed;
     bool downPressed;
     bool leftPressed;
     bool rightPressed;
+
+private slots:
+    void updateMovement();
+
+private:
+    void updateMovementRectilineo();
+    void updateMovementConGravedad();
+
+private:
+    QTimer* timer;
 };
 
 #endif

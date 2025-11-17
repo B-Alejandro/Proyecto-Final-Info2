@@ -7,6 +7,7 @@ CONFIG += qt
 SOURCES += \
     Obstaculo.cpp \
     enemigo.cpp \
+    fisica.cpp \
     juego.cpp \
     jugador.cpp \
     main.cpp \
@@ -16,6 +17,7 @@ SOURCES += \
 HEADERS += \
     Obstaculo.h \
     enemigo.h \
+    fisica.h \
     juego.h \
     jugador.h \
     nivel.h \

@@ -19,23 +19,38 @@ Juego::Juego(QObject* parent)
 Juego::~Juego()
 {
 }
-
 void Juego::crearVista()
 {
     QScreen* screen = QGuiApplication::primaryScreen();
 
     int w = screen->geometry().width();
-    int h = screen->availableGeometry().height()-30;
+    int h = screen->availableGeometry().height() - 30;
 
+    // crea escena del tamano inicial
     escena = new QGraphicsScene(0, 0, w, h, this);
 
+    // crea la vista
     vista = new QGraphicsView(escena);
+
+    // configura render
     vista->setRenderHint(QPainter::Antialiasing);
+
+    // desactiva scrollbars para juego
     vista->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     vista->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    vista->setFixedSize(w, h);
+
+    // permite que la ventana pueda cambiar de tamano
+    // sin bloquear la vista
+    vista->setResizeAnchor(QGraphicsView::AnchorViewCenter);
+    vista->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
+
+    // tamano inicial
+    vista->resize(w, h);
+
+    // muestra la vista
     vista->show();
 }
+
 
 void Juego::cargarNiveles()
 {
