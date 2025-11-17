@@ -64,10 +64,10 @@ void Persona::updateMovementRectilineo()
     double dx = 0.0;
     double dy = 0.0;
 
-    if (upPressed) dy -= speed;
-    if (downPressed) dy += speed;
-    if (leftPressed) dx -= speed;
-    if (rightPressed) dx += speed;
+    if (upPressed) dy -= speed+3;
+    if (downPressed) dy += speed+3;
+    if (leftPressed) dx -= speed+3;
+    if (rightPressed) dx += speed+3;
 
     if (dx == 0 && dy == 0) return;
 
@@ -103,8 +103,8 @@ void Persona::updateMovementConGravedad()
     double h = rect().height();
 
     double dx = 0.0;
-    if (leftPressed) dx -= speed;
-    if (rightPressed) dx += speed;
+    if (leftPressed) dx -= speed+6;
+    if (rightPressed) dx += speed+6;
 
     if (dx != 0.0) {
         double prevX = x();

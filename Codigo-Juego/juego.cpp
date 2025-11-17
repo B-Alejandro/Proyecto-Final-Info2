@@ -25,7 +25,7 @@ void Juego::crearVista()
     QScreen* screen = QGuiApplication::primaryScreen();
 
     int w = screen->geometry().width();
-    int h = screen->availableGeometry().height();
+    int h = screen->availableGeometry().height()-30;
 
     escena = new QGraphicsScene(0, 0, w, h, this);
 
@@ -40,7 +40,7 @@ void Juego::crearVista()
 void Juego::cargarNiveles()
 {
     // Crear nivel 1
-    Nivel* nivel1 = new Nivel(escena);
+    Nivel* nivel1 = new Nivel(escena,1);
     niveles.append(nivel1);
 
     // Posible carga de mas niveles en el futuro
