@@ -5,8 +5,8 @@
 #include <QGraphicsView>
 #include <QGraphicsScene>
 #include <QTimer>
-
-class Nivel;
+#include <QList>
+#include "nivelbase.h"
 
 class Juego : public QObject
 {
@@ -25,14 +25,13 @@ private slots:
 private:
     void crearVista();
     void cargarNiveles();
-
 private:
     QGraphicsView* vista;
     QGraphicsScene* escena;
     QTimer* timer;
 
-    QList<Nivel*> niveles;
-    int nivelActual;
+    QList<NivelBase*> niveles;
+    int nivelActual;  // Este debe ir al final
 };
 
 #endif

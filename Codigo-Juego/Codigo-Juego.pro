@@ -11,10 +11,10 @@ SOURCES += \
     juego.cpp \
     jugador.cpp \
     main.cpp \
-    nivel.cpp \
     nivel1.cpp \
     nivel2.cpp \
     nivel3.cpp \
+    nivelbase.cpp \
     persona.cpp
 
 HEADERS += \
@@ -23,10 +23,10 @@ HEADERS += \
     fisica.h \
     juego.h \
     jugador.h \
-    nivel.h \
     nivel1.h \
     nivel2.h \
     nivel3.h \
+    nivelbase.h \
     persona.h
 
 FORMS +=
