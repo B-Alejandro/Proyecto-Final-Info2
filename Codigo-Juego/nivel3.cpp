@@ -17,10 +17,11 @@ Nivel3::Nivel3(QGraphicsScene* escena, QObject* parent)
 */
 void Nivel3::configurarNivel()
 {
-    // Crear jugador centrado con movimiento rectilíneo
-    crearJugador(sceneW * 0.5, sceneH * 0.5, TipoMovimiento::RECTILINEO);
+    // Crear jugador en el suelo, no en el aire
+    crearJugador(sceneW * 0.5, sceneH - sceneH * 0.1 - 40, TipoMovimiento::RECTILINEO);
+    //                          ^^^^^^^^^^^^^^^^^^^^^^^^^
+    //                          Misma posición Y que en Nivel 1
 }
-
 /*
   Crea enemigos para el nivel 3
 */

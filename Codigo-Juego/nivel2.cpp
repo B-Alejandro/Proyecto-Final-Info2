@@ -62,15 +62,7 @@ void Nivel2::crearObstaculos()
 void Nivel2::actualizar()
 {
     if (jugador) {
-        // El jugador se mueve automáticamente con teclas
-        // Aquí solo controlamos el scroll/límites
-
         qreal x = jugador->x();
 
-        // Limitar posición del jugador para scroll
-        if (x > sceneW * 0.6)
-        {
-            jugador->setX(sceneW * 0.6);
-        }
     }
 }
