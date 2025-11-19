@@ -20,6 +20,8 @@ protected:
 private:
     int vistaAncho;
     int vistaAlto;
+    Enemigo* enemigoAtras; // Enemigo que persigue por detrás
+    Obstaculo* suelo; // Suelo del nivel
 };
 
 #endif // NIVEL2_H

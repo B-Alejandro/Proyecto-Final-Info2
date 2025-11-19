@@ -78,12 +78,17 @@ void Juego::cambiarNivel(int id)
     if (id < 0 || id >= niveles.size())
         return;
 
+    // Limpiar nivel actual si existe
+    if (nivelActual >= 0 && nivelActual < niveles.size()) {
+        niveles[nivelActual]->limpiar();
+    }
+
     nivelActual = id;
 
-    // Asignar la escena del nivel a la vista
+    // Asignar la escena del nuevo nivel a la vista
     vista->setScene(niveles[nivelActual]->getEscena());
 
-    // Cargar elementos del nivel
+    // Cargar elementos del nuevo nivel
     niveles[nivelActual]->cargarElementos();
 }
 

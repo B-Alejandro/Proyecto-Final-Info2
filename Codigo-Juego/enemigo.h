@@ -23,12 +23,13 @@ private slots:
 
 private:
     void randomizeDirection();
-    void tryJump();
+    void tryJump(); // Método anterior (salto aleatorio)
+    void tryJumpIfObstacleAhead(); // Nuevo método: salto inteligente
+    bool detectarObstaculoAdelante(); // Detecta obstáculos adelante
 
-private:
     QTimer* aiTimer;
     int changeDirectionTime;
     bool canJump;
 };
 
-#endif
+#endif // ENEMIGO_H
