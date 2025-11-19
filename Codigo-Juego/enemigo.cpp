@@ -51,7 +51,7 @@ void Enemigo::randomizeDirection()
 
         // Queremos que se mueva muy lento hacia abajo
         downPressed  = true;
-        speed = 1;   // más lento que lo normal (tú ajustas)
+        speed = 0.0001;   // más lento que lo normal (tú ajustas)
 
         return;  // No ejecutar la IA normal
     }

@@ -34,6 +34,30 @@ protected:
       Actualiza la lógica del nivel según el tiempo.
     */
     void actualizar() override;
+
+private:
+
+    QList<Enemigo*> listaEnemigos;          // enemigos vivos que gestionamos
+    int spawnDelayMs = 800;                 // tiempo entre spawns cuando uno muere
+    int spawnMargin = 120;                  // cuánto por encima del visible spawnear
+
+    /*
+     * FUNCIONES PARA LA APARICION DE ENEMIGOS.
+     *
+     * -Estas funciones son unicas de este nivel debido a sus propiedades de vision
+     * y sus mecanicas
+     *
+     */
+
+    //Aparicion de enemigos desde la parte superior de la pantalla
+    void spawnEnemyAboveView();
+
+    //tick principal del nivel
+    void gameTick();
+
+    //FUNCION PRIMORDIAL, elimina los enemigos que llegan al final de la pantalla
+    void cleanupOffscreen();
+
 };
 
 #endif

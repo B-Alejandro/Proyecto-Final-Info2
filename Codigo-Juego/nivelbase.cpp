@@ -51,7 +51,7 @@ void NivelBase::cargarElementos()
 {
     configurarEscena();
     configurarNivel();    // Cada nivel define su configuración específica
-    crearObstaculos();    // Cada nivel crea sus obstáculos
+    //crearObstaculos();    // Cada nivel crea sus obstáculos
     crearEnemigos();      // Cada nivel crea sus enemigos
 }
 
