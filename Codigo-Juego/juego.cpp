@@ -5,11 +5,9 @@
 
 #include <QScreen>
 #include <QGuiApplication>
-#include <QBrush>
-#include <QColor>
 
 Juego::Juego(QObject* parent)
-    : QObject(parent), nivelActual(-1), escena(0), vista(0)
+    : QObject(parent), nivelActual(-1), vistaAncho(0), vistaAlto(0)
 {
     crearVista();
     cargarNiveles();
@@ -20,25 +18,18 @@ Juego::Juego(QObject* parent)
 
 Juego::~Juego()
 {
-    // Los niveles se eliminan automaticamente por ser hijos de QObject
-    // La escena y vista se eliminan por el parent
+    qDeleteAll(niveles);
 }
 
-/*
-  Crea la vista y escena principales.
-*/
 void Juego::crearVista()
 {
     QScreen* screen = QGuiApplication::primaryScreen();
 
-    int w = screen->geometry().width();
-    int h = screen->availableGeometry().height() - 30;
+    vistaAncho = screen->geometry().width();
+    vistaAlto = screen->availableGeometry().height() - 30;
 
-    // Crea escena del tamaño inicial
-    escena = new QGraphicsScene(0, 0, w, h, this);
-
-    // Crea la vista
-    vista = new QGraphicsView(escena);
+    // Crear solo la vista sin escena
+    vista = new QGraphicsView();
 
     // Configura render
     vista->setRenderHint(QPainter::Antialiasing);
@@ -48,35 +39,35 @@ void Juego::crearVista()
     vista->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
     // Permite que la ventana pueda cambiar de tamaño
-    // sin bloquear la vista
     vista->setResizeAnchor(QGraphicsView::AnchorViewCenter);
     vista->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
 
     // Tamaño inicial
-    vista->resize(w, h);
+    vista->resize(vistaAncho, vistaAlto);
 
     // Muestra la vista
     vista->show();
 }
 
-/*
-  Crea los niveles disponibles usando Nivel1, Nivel2, Nivel3.
-*/
 void Juego::cargarNiveles()
 {
-    // En cargarNiveles():
-    niveles.append(new Nivel1(escena, this)); // Añadir 'this' como parent
-    niveles.append(new Nivel2(escena, this));
-    niveles.append(new Nivel3(escena, this));
-    // Con esta alternativa, el destructor del nivel se llama automáticamente al destruir Juego.
+    // Crear los niveles (cada uno crea su propia escena)
+    Nivel1* nivel1 = new Nivel1(this);
+    niveles.append(nivel1);
+
+    Nivel2* nivel2 = new Nivel2(this);
+    niveles.append(nivel2);
+
+    Nivel3* nivel3 = new Nivel3(this);
+    niveles.append(nivel3);
 }
 
 void Juego::iniciar()
 {
-    // Cargar el primer nivel automaticamente
+    // Cargar el primer nivel automáticamente
     if (!niveles.isEmpty())
     {
-        cambiarNivel(0);
+        cambiarNivel(1);
     }
 
     timer->start(16); // ~60 FPS
@@ -89,7 +80,10 @@ void Juego::cambiarNivel(int id)
 
     nivelActual = id;
 
-    escena->clear();
+    // Asignar la escena del nivel a la vista
+    vista->setScene(niveles[nivelActual]->getEscena());
+
+    // Cargar elementos del nivel
     niveles[nivelActual]->cargarElementos();
 }
 
