@@ -23,11 +23,9 @@ void Nivel1::configurarNivel()
     crearJugador(sceneW / 2, sceneH - 100, TipoMovimiento::RECTILINEO);
 }
 
-/*
-  Crea enemigos para el nivel 1
-*/
 void Nivel1::crearEnemigos()
 {
+    // Implementar creación de enemigos específicos del nivel 1
     //int size = sceneH * 0.12;
     QTimer* gameTimer = nullptr;            // tick principal
     gameTimer = new QTimer(this);

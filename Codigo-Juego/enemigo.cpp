@@ -1,6 +1,8 @@
 #include "enemigo.h"
+#include "obstaculo.h"
 #include <QBrush>
 #include <QRandomGenerator>
+#include <QGraphicsScene>
 
 Enemigo::Enemigo(qreal w,
                  qreal h,
@@ -9,26 +11,22 @@ Enemigo::Enemigo(qreal w,
                  TipoMovimiento tipo,
                  int nivel)
     : Persona(w, h, sceneWidth, sceneHeight, tipo)
-,   numeroNivel(nivel)
+    ,   numeroNivel(nivel)
 {
     setBrush(QBrush(Qt::red));
-
     speed = 3;
-
     changeDirectionTime = 2000;
     canJump = true;
-
     aiTimer = new QTimer(this);
     connect(aiTimer, &QTimer::timeout, this, &Enemigo::changeDirection);
     aiTimer->start(changeDirectionTime);
-
     randomizeDirection();
 }
 
 void Enemigo::handleInput()
 {
     if (tipoMovimiento == TipoMovimiento::CON_GRAVEDAD && canJump) {
-        tryJump();
+        tryJumpIfObstacleAhead();
     }
 }
 
@@ -41,24 +39,16 @@ void Enemigo::randomizeDirection()
 {
     QRandomGenerator* rng = QRandomGenerator::global();
 
-    if (numeroNivel == 1){
-        /* Movimiento SOLO hacia abajo, poquito a poquito para dar la sensacion de que los enemigos aparecen
-         * a medida que el mapa va pasando/ el scroll vertical va avanzando.
-         */
-        upPressed    = false;
-        leftPressed  = false;
+    if (numeroNivel == 1) {
+        upPressed = false;
+        leftPressed = false;
         rightPressed = false;
-
-        // Queremos que se mueva muy lento hacia abajo
-        downPressed  = true;
-        speed = 0.0001;   // más lento que lo normal (tú ajustas)
-
-        return;  // No ejecutar la IA normal
+        downPressed = true;
+        speed = 0.0001;
+        return;
     }
-    // ---------------------------------------
 
     if (tipoMovimiento == TipoMovimiento::RECTILINEO) {
-
         upPressed    = rng->bounded(4) == 0;
         downPressed  = rng->bounded(4) == 0;
         leftPressed  = rng->bounded(4) == 0;
@@ -73,13 +63,51 @@ void Enemigo::randomizeDirection()
             if (rng->bounded(2)) leftPressed = false;
             else rightPressed = false;
         }
-
     } else {
-        int direction = rng->bounded(3);
-
-        leftPressed  = (direction == 0);
-        rightPressed = (direction == 1);
+        leftPressed = false;
+        rightPressed = false;
     }
+}
+
+void Enemigo::tryJumpIfObstacleAhead()
+{
+    if (!onGround) return;
+
+    bool obstaculoDetectado = detectarObstaculoAdelante();
+
+    if (obstaculoDetectado) {
+        vy = -10;
+        onGround = false;
+    }
+}
+
+bool Enemigo::detectarObstaculoAdelante()
+{
+    if (!scene()) return false;
+
+    qreal distanciaDeteccion = rect().width() * 1.5;
+
+    QRectF zonaDeteccion(
+        x() + rect().width(),
+        y(),
+        distanciaDeteccion,
+        rect().height()
+        );
+
+    QList<QGraphicsItem*> itemsAdelante = scene()->items(zonaDeteccion, Qt::IntersectsItemShape);
+
+    for (QGraphicsItem* item : itemsAdelante) {
+        if (item == this) continue;
+
+        Obstaculo* obs = dynamic_cast<Obstaculo*>(item);
+        if (obs) {
+            if (obs->x() > x()) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 void Enemigo::tryJump()

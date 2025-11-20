@@ -1,1 +1,7 @@
-<RCC/>
+<RCC>
+    <qresource prefix="/">
+        <file>Recursos/Sprites/Run_homeless.png</file>
+        <file>Recursos/Sprites/Jump_homeless.png</file>
+        <file>Recursos/Sprites/Dead.png</file>
+    </qresource>
+</RCC>

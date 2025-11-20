@@ -1,3 +1,4 @@
+// ============ obstaculo.cpp ============
 #include "obstaculo.h"
 #include <QBrush>
 #include <QPen>

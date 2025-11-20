@@ -32,11 +32,11 @@ private:
     QGraphicsView* vista;
     QTimer* timer;
 
-    int vistaAncho;
-    int vistaAlto;
-
     QList<NivelBase*> niveles;
     int nivelActual;
+
+    int vistaAncho;
+    int vistaAlto;
 };
 
 #endif

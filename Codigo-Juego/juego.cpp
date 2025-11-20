@@ -6,6 +6,11 @@
 #include <QScreen>
 #include <QGuiApplication>
 
+/*
+  Clase Juego
+  Maneja la vista principal, el cambio de niveles y el timer del juego.
+*/
+
 Juego::Juego(QObject* parent)
     : QObject(parent), nivelActual(-1), vistaAncho(0), vistaAlto(0)
 {
@@ -18,9 +23,16 @@ Juego::Juego(QObject* parent)
 
 Juego::~Juego()
 {
+    /*
+      Libera memoria de los niveles almacenados.
+    */
     qDeleteAll(niveles);
 }
 
+/*
+  Funcion: crearVista
+  Crea la vista grafica principal y configura sus parametros.
+*/
 void Juego::crearVista()
 {
     QScreen* screen = QGuiApplication::primaryScreen();
@@ -28,30 +40,24 @@ void Juego::crearVista()
     vistaAncho = screen->geometry().width();
     vistaAlto = screen->availableGeometry().height() - 30;
 
-    // Crear solo la vista sin escena
     vista = new QGraphicsView();
 
-    // Configura render
     vista->setRenderHint(QPainter::Antialiasing);
-
-    // Desactiva scrollbars para juego
     vista->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     vista->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-
-    // Permite que la ventana pueda cambiar de tamaño
     vista->setResizeAnchor(QGraphicsView::AnchorViewCenter);
     vista->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
 
-    // Tamaño inicial
     vista->resize(vistaAncho, vistaAlto);
-
-    // Muestra la vista
     vista->show();
 }
 
+/*
+  Funcion: cargarNiveles
+  Instancia todos los niveles del juego.
+*/
 void Juego::cargarNiveles()
 {
-    // Crear los niveles (cada uno crea su propia escena)
     Nivel1* nivel1 = new Nivel1(this);
     niveles.append(nivel1);
 
@@ -62,31 +68,44 @@ void Juego::cargarNiveles()
     niveles.append(nivel3);
 }
 
+/*
+  Funcion: iniciar
+  Comienza el juego cargando el primer nivel y activando el timer.
+*/
 void Juego::iniciar()
 {
-    // Cargar el primer nivel automáticamente
     if (!niveles.isEmpty())
     {
-        cambiarNivel(0);
+        cambiarNivel(1);
     }
 
-    timer->start(16); // ~60 FPS
+    timer->start(16);
 }
 
+/*
+  Funcion: cambiarNivel
+  Cambia al nivel solicitado, limpiando el anterior y configurando la vista.
+*/
 void Juego::cambiarNivel(int id)
 {
     if (id < 0 || id >= niveles.size())
         return;
 
+    if (nivelActual >= 0 && nivelActual < niveles.size()) {
+        niveles[nivelActual]->limpiar();
+    }
+
     nivelActual = id;
 
-    // Asignar la escena del nivel a la vista
     vista->setScene(niveles[nivelActual]->getEscena());
 
-    // Cargar elementos del nivel
     niveles[nivelActual]->cargarElementos();
 }
 
+/*
+  Funcion: actualizar
+  Llamado periodicamente por el timer para avanzar la logica del nivel.
+*/
 void Juego::actualizar()
 {
     if (nivelActual >= 0 && nivelActual < niveles.size())

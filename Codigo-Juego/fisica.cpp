@@ -1,18 +1,32 @@
+// ============ fisica.cpp ============
 #include "fisica.h"
 #include <QGraphicsRectItem>
+#include <QRectF>
 
+/*
+  Funcion: colisionan
+  Verifica si dos items se intersectan.
+*/
 bool Fisica::colisionan(QGraphicsItem* a, QGraphicsItem* b)
 {
     if (!a || !b || a == b) return false;
     return a->sceneBoundingRect().intersects(b->sceneBoundingRect());
 }
 
+/*
+  Funcion: obtenerColisiones
+  Retorna la lista de items que colisionan con otro.
+*/
 QList<QGraphicsItem*> Fisica::obtenerColisiones(QGraphicsItem* item)
 {
     if (!item) return QList<QGraphicsItem*>();
     return item->collidingItems();
 }
 
+/*
+  Funcion: colisionDebajo
+  Verifica si hay un obstaculo justo debajo del item.
+*/
 bool Fisica::colisionDebajo(QGraphicsItem* item)
 {
     if (!item) return false;
@@ -34,6 +48,34 @@ bool Fisica::colisionDebajo(QGraphicsItem* item)
     return false;
 }
 
+/*
+  Funcion: corregirColisionHorizontal
+  Aplica un empuje para evitar que el item quede dentro del obstaculo.
+*/
+void Fisica::corregirColisionHorizontal(QGraphicsItem* item, QGraphicsItem* otro, double prevX)
+{
+    if (!item || !otro) return;
+
+    QRectF itemRect = item->sceneBoundingRect();
+    QRectF otroRect = otro->sceneBoundingRect();
+
+    double delta = item->scenePos().x() - item->pos().x();
+
+    if (item->x() > prevX) {
+        item->setX(otroRect.left() - itemRect.width() - delta);
+    }
+    else if (item->x() < prevX) {
+        item->setX(otroRect.right() - delta);
+    }
+    else {
+        item->setX(prevX);
+    }
+}
+
+/*
+  Funcion: resolverColisionHorizontal
+  Ajusta la posicion horizontal si hay colision con obstaculos.
+*/
 double Fisica::resolverColisionHorizontal(QGraphicsItem* item,
                                           double prevX,
                                           double sceneW)
@@ -48,15 +90,21 @@ double Fisica::resolverColisionHorizontal(QGraphicsItem* item,
         return sceneW - w;
 
     QList<QGraphicsItem*> colisiones = item->collidingItems();
+
     for (QGraphicsItem* otro : colisiones) {
         if (otro->type() == QGraphicsRectItem::Type) {
-            return prevX;
+            corregirColisionHorizontal(item, otro, prevX);
+            return item->x();
         }
     }
 
     return item->x();
 }
 
+/*
+  Funcion: resolverColisionVertical
+  Ajusta la posicion vertical del item con gravedad.
+*/
 double Fisica::resolverColisionVertical(QGraphicsItem* item,
                                         double prevY,
                                         double sceneH,
@@ -80,7 +128,6 @@ double Fisica::resolverColisionVertical(QGraphicsItem* item,
     }
 
     QList<QGraphicsItem*> colisiones = item->collidingItems();
-    QRectF myRect = item->sceneBoundingRect();
 
     for (QGraphicsItem* otro : colisiones) {
         if (otro->type() != QGraphicsRectItem::Type) continue;
@@ -93,7 +140,8 @@ double Fisica::resolverColisionVertical(QGraphicsItem* item,
                 onGround = true;
                 return r.top() - h;
             }
-        } else if (vy < 0) {
+        }
+        else if (vy < 0) {
             if (prevY >= r.bottom() - 2) {
                 vy = 0;
                 return r.bottom();
@@ -104,6 +152,10 @@ double Fisica::resolverColisionVertical(QGraphicsItem* item,
     return item->y();
 }
 
+/*
+  Funcion: hayColisionConObstaculos
+  Devuelve true si el item toca un obstaculo rectangular.
+*/
 bool Fisica::hayColisionConObstaculos(QGraphicsItem* item)
 {
     if (!item) return false;
@@ -119,6 +171,10 @@ bool Fisica::hayColisionConObstaculos(QGraphicsItem* item)
     return false;
 }
 
+/*
+  Funcion: aplicarMovimientoRectilineo
+  Mueve el item en dx,dy con limites de escena.
+*/
 void Fisica::aplicarMovimientoRectilineo(QGraphicsItem* item,
                                          double dx,
                                          double dy,
@@ -137,7 +193,6 @@ void Fisica::aplicarMovimientoRectilineo(QGraphicsItem* item,
     double newX = prevX + dx;
     double newY = prevY + dy;
 
-    // Limitar a los bordes de la escena
     if (newX < 0) newX = 0;
     if (newX + w > sceneW) newX = sceneW - w;
     if (newY < 0) newY = 0;
@@ -145,12 +200,15 @@ void Fisica::aplicarMovimientoRectilineo(QGraphicsItem* item,
 
     item->setPos(newX, newY);
 
-    // Verificar colisiones con obstáculos
     if (hayColisionConObstaculos(item)) {
         item->setPos(prevX, prevY);
     }
 }
 
+/*
+  Funcion: aplicarMovimientoConGravedad
+  Mueve un item aplicando dx y gravedad vertical.
+*/
 void Fisica::aplicarMovimientoConGravedad(QGraphicsItem* item,
                                           double dx,
                                           double& vy,
@@ -164,18 +222,15 @@ void Fisica::aplicarMovimientoConGravedad(QGraphicsItem* item,
     double prevX = item->x();
     double prevY = item->y();
 
-    // Movimiento horizontal
     if (dx != 0) {
         item->setX(item->x() + dx);
         double fixedX = resolverColisionHorizontal(item, prevX, sceneW);
         item->setX(fixedX);
     }
 
-    // Aplicar gravedad
     vy += gravedad;
     item->setY(item->y() + vy);
 
-    // Resolver colisiones verticales
     double fixedY = resolverColisionVertical(item, prevY, sceneH, vy, onGround);
     item->setY(fixedY);
 }
