@@ -8,8 +8,8 @@ Enemigo::Enemigo(qreal w,
                  qreal sceneHeight,
                  TipoMovimiento tipo,
                  int nivel)
-    : Persona(w, h, sceneWidth, sceneHeight, tipo),
-    numeroNivel(nivel)
+    : Persona(w, h, sceneWidth, sceneHeight, tipo)
+,   numeroNivel(nivel)
 {
     setBrush(QBrush(Qt::red));
 

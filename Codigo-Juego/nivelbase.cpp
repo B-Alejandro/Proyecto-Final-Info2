@@ -3,6 +3,7 @@
 #include "enemigo.h"
 #include "obstaculo.h"
 #include "persona.h"
+#include "juego.h"
 #include <QBrush>
 #include <QColor>
 #include <QGraphicsView>
@@ -10,23 +11,36 @@
 /*
   Constructor base
 */
-NivelBase::NivelBase(QGraphicsScene* escena, int numero, QObject* parent)
+NivelBase::NivelBase(Juego* juego, int numero, QObject* parent)
     : QObject(parent),
-    escena(escena),
+    escena(0),
     jugador(0),
+    juego(juego),
     numeroNivel(numero),
     sceneW(0),
     sceneH(0)
 {
-    // Inicializar dimensiones de la escena
-    if (escena) {
-        sceneW = escena->sceneRect().width();
-        sceneH = escena->sceneRect().height();
+}
 
-        // Si las dimensiones son 0, usar valores por defecto
-        if (sceneW == 0) sceneW = 800;
-        if (sceneH == 0) sceneH = 600;
+NivelBase::~NivelBase()
+{
+    if (escena) {
+        delete escena;
     }
+}
+
+/*
+  Crea la escena con dimensiones específicas
+*/
+void NivelBase::crearEscena(int ancho, int alto)
+{
+    if (escena) {
+        delete escena;
+    }
+
+    escena = new QGraphicsScene(0, 0, ancho, alto, this);
+    sceneW = ancho;
+    sceneH = alto;
 }
 
 /*
@@ -51,7 +65,7 @@ void NivelBase::cargarElementos()
 {
     configurarEscena();
     configurarNivel();    // Cada nivel define su configuración específica
-    //crearObstaculos();    // Cada nivel crea sus obstáculos
+    crearObstaculos();    // Cada nivel crea sus obstáculos
     crearEnemigos();      // Cada nivel crea sus enemigos
 }
 

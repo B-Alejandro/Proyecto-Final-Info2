@@ -3,10 +3,9 @@
 
 #include <QObject>
 #include <QGraphicsView>
-#include <QGraphicsScene>
 #include <QTimer>
-#include <QList>
-#include "nivelbase.h"
+
+class NivelBase;
 
 class Juego : public QObject
 {
@@ -18,6 +17,9 @@ public:
 
     void iniciar();
     void cambiarNivel(int id);
+    QGraphicsView* getVista() { return vista; }
+    int getVistaAncho() const { return vistaAncho; }
+    int getVistaAlto() const { return vistaAlto; }
 
 private slots:
     void actualizar();
@@ -25,13 +27,16 @@ private slots:
 private:
     void crearVista();
     void cargarNiveles();
+
 private:
     QGraphicsView* vista;
-    QGraphicsScene* escena;
     QTimer* timer;
 
+    int vistaAncho;
+    int vistaAlto;
+
     QList<NivelBase*> niveles;
-    int nivelActual;  // Este debe ir al final
+    int nivelActual;
 };
 
 #endif

@@ -1,68 +1,85 @@
+
+// ============ nivel2.cpp ============
 #include "nivel2.h"
+#include "juego.h"
 #include "jugador.h"
 #include "enemigo.h"
 #include "obstaculo.h"
 #include "persona.h"
-#include <QColor>
+#include <QGraphicsView>
 
-/*
-  Nivel con scroll y gravedad
-*/
-Nivel2::Nivel2(QGraphicsScene* escena, QObject* parent)
-    : NivelBase(escena, 2, parent)
+Nivel2::Nivel2(Juego* juego, QObject* parent)
+    : NivelBase(juego, 2, parent)
 {
+    // Guardar dimensiones de la vista
+    vistaAncho = juego->getVistaAncho();
+    vistaAlto = juego->getVistaAlto();
+
+    // Crear escena 3 veces más grande que la vista
+    // (3x en ancho para scroll horizontal, mantener alto)
+    int anchoEscena = vistaAncho * 3;
+    int altoEscena = vistaAlto;
+
+    crearEscena(anchoEscena, altoEscena);
 }
 
-/*
-  Configuración específica del nivel 2
-*/
 void Nivel2::configurarNivel()
 {
-    // Crear jugador con gravedad
-    crearJugador(120, sceneH - sceneH * 0.1 - 40, TipoMovimiento::CON_GRAVEDAD);
+    // Crear jugador al inicio de la escena (izquierda)
+    // Usar movimiento horizontal para scroll
+    crearJugador(vistaAncho / 2, sceneH - 100, TipoMovimiento::CON_GRAVEDAD);
+
+    // Centrar la vista inicialmente en el jugador
+    if (escena && !escena->views().isEmpty()) {
+        QGraphicsView* vista = escena->views().first();
+        vista->centerOn(jugador);
+    }
 }
 
-/*
-  Crea enemigos para el nivel 2
-*/
 void Nivel2::crearEnemigos()
 {
-    int size = sceneH * 0.12;
+    // Crear enemigos distribuidos a lo largo de toda la escena
+    // Algunos fuera de la vista inicial para el efecto de scroll
 
-    Enemigo* e1 = new Enemigo(size, size, sceneW, sceneH, TipoMovimiento::CON_GRAVEDAD);
-    e1->setPos(sceneW * 0.6, sceneH * 0.3);
-    e1->setSpeed(2);
-    enemigos.append(e1);
-    escena->addItem(e1);
+    // Ejemplo: enemigos en diferentes posiciones X
+    // (Implementar según tu clase Enemigo)
 }
 
-/*
-  Crea obstáculos para el nivel 2
-*/
 void Nivel2::crearObstaculos()
 {
-    int sueloAltura = 40;
+    // Crear obstáculos distribuidos a lo largo de toda la escena
+    // Algunos fuera de la vista inicial
 
-    // Suelo principal
-    Obstaculo* suelo = new Obstaculo(0, sceneH - sueloAltura, sceneW, sueloAltura, QColor(139, 69, 19));
-    suelo->setBorderColor(Qt::black, 2);
-    obstaculos.append(suelo);
-    escena->addItem(suelo);
-
-    // Plataforma flotante
-    Obstaculo* plataforma = new Obstaculo(sceneW * 0.3, sceneH * 0.6, sceneW * 0.2, 20, QColor(101, 67, 33));
-    plataforma->setBorderColor(Qt::black, 2);
-    obstaculos.append(plataforma);
-    escena->addItem(plataforma);
+    // Ejemplo: obstáculos en diferentes posiciones X
+    // (Implementar según tu clase Obstaculo)
 }
 
-/*
-  Actualización con scroll simple
-*/
 void Nivel2::actualizar()
 {
-    if (jugador) {
-        qreal x = jugador->x();
+    // Llamar actualización base
+    NivelBase::actualizar();
 
+    // Implementar scroll infinito siguiendo al jugador
+    if (jugador && escena && !escena->views().isEmpty()) {
+        QGraphicsView* vista = escena->views().first();
+
+        // Centrar la vista en el jugador (scroll automático)
+        vista->centerOn(jugador);
+
+        // Opcional: Lógica para "wrap around" o regeneración de objetos
+        // cuando el jugador llega al final de la escena
+        qreal posJugadorX = jugador->x();
+
+        // Si el jugador pasa cierta posición, podrías:
+        // 1. Teletransportarlo al inicio (wrap around)
+        // 2. Generar nuevos obstáculos/enemigos
+        // 3. Mover objetos que quedaron atrás hacia adelante
+
+        // Ejemplo de wrap around simple:
+        /*
+        if (posJugadorX > sceneW - vistaAncho/2) {
+            jugador->setPos(vistaAncho/2, jugador->y());
+        }
+        */
     }
 }

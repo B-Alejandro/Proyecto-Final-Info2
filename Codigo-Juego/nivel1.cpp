@@ -1,24 +1,26 @@
+
+// ============ nivel1.cpp ============
 #include "nivel1.h"
-//#include "jugador.h"
+#include "juego.h"
+#include "jugador.h"
 #include "enemigo.h"
 #include "obstaculo.h"
-#include <QColor>
+#include "persona.h"
 
-/*
-  Constructor
-*/
-Nivel1::Nivel1(QGraphicsScene* escena, QObject* parent)
-    : NivelBase(escena, 1, parent)
+Nivel1::Nivel1(Juego* juego, QObject* parent)
+    : NivelBase(juego, 1, parent)
 {
+    // Crear escena del mismo tamaño que la vista
+    int ancho = juego->getVistaAncho();
+    int alto = juego->getVistaAlto();
+
+    crearEscena(ancho, alto);
 }
 
-/*
-  Configuración específica del nivel 1
-*/
 void Nivel1::configurarNivel()
 {
-    // Crear jugador con movimiento rectilíneo
-    crearJugador(700, sceneH - sceneH * 0.1 - 40, TipoMovimiento::RECTILINEO);
+    // Crear jugador con movimiento libre
+    crearJugador(sceneW / 2, sceneH - 100, TipoMovimiento::RECTILINEO);
 }
 
 /*
@@ -26,45 +28,74 @@ void Nivel1::configurarNivel()
 */
 void Nivel1::crearEnemigos()
 {
-    int size = sceneH * 0.12;
+    //int size = sceneH * 0.12;
     QTimer* gameTimer = nullptr;            // tick principal
     gameTimer = new QTimer(this);
     connect(gameTimer, &QTimer::timeout, this, &Nivel1::gameTick);
     gameTimer->start(16); // ~60 FPS
 
 
-    int spawnDelayMs = 800;                 // tiempo entre spawns cuando uno muere
-    int spawnMargin = 120;                  // cuánto por encima de la pantalla visible se puede spawnear
 
-    spawnEnemyAboveView();
+    spawnearOleada();
 
-    /*Enemigo* e1 = new Enemigo(size, size, sceneW, sceneH, TipoMovimiento::RECTILINEO,1);
-    e1->setPos(sceneW * 0.4, sceneH * 0.1);
-    e1->setSpeed(0);
-    enemigos.append(e1);
-    escena->addItem(e1);*/
 }
 
-void Nivel1::spawnEnemyAboveView()
+void Nivel1::spawnearOleada()
 {
     int size = sceneH * 0.12;
     if (!escena) return;
+    int tipoOleada = 0;
+    //int tipoOleada = QRandomGenerator::global()->bounded(2);  // 0 a 5
 
-    /* rect visible en coordenadas de escena
-    QRectF visible = vista->mapToScene(vista->viewport()->rect()).boundingRect();
-    qreal spawnY = visible.top() - spawnMargin;
+    if(tipoOleada == 0){
+        int posX = 50;
 
-    qreal minX = escena->sceneRect().left();
-    qreal maxX = escena->sceneRect().width() - enemyWidth;*/
+        for (int i = 0; i < 8; ++i) {
+            posX += 150;
 
-    //qreal spawnX = QRandomGenerator::global()->bounded(sceneH, sceneW);
+            Enemigo* e1 = new Enemigo(size, size, sceneW, sceneH, TipoMovimiento::RECTILINEO,1);
+            e1->setPos(posX, sceneH * 0.1);
+            e1->setSpeed(0);
+            enemigos.append(e1);
+            escena->addItem(e1);
 
-    Enemigo* e1 = new Enemigo(size, size, sceneW, sceneH, TipoMovimiento::RECTILINEO,1);
-    e1->setPos(sceneW * 0.4, sceneH * 0.1);
-    e1->setSpeed(0);
-    enemigos.append(e1);
-    escena->addItem(e1);
-    listaEnemigos.append(e1);
+            // guardamos referencias para control de la oleada
+            listaEnemigos.append(e1);
+        }
+    }
+    else if(tipoOleada == 1){
+        int posX = 300;
+        double posY[8] = {sceneH*0.1,sceneH*0.15,sceneH*0.2,sceneH*0.25,sceneH*0.25,sceneH*0.2,sceneH*0.15,sceneH*0.1};
+
+        for (int i = 0; i < 8; ++i) {
+            posX += 100;
+
+            Enemigo* e1 = new Enemigo(size, size, sceneW, sceneH, TipoMovimiento::RECTILINEO,1);
+            e1->setPos(posX, posY[i]);
+            e1->setSpeed(0);
+            enemigos.append(e1);
+            escena->addItem(e1);
+
+            // guardamos referencias para control de la oleada
+            listaEnemigos.append(e1);
+        }
+    }
+    else if(tipoOleada == 2){
+        int posX = 100;
+        double posY[8] = {sceneH*0.1,sceneH*0.15,sceneH*0.2,sceneH*0.25,sceneH*0.25,sceneH*0.2,sceneH*0.15,sceneH*0.1};
+        for (int i = 0; i < 8; ++i) {
+            posX += 100;
+
+            Enemigo* e1 = new Enemigo(size, size, sceneW, sceneH, TipoMovimiento::RECTILINEO,1);
+            e1->setPos(posX, posY[i]);
+            e1->setSpeed(0);
+            enemigos.append(e1);
+            escena->addItem(e1);
+
+            // guardamos referencias para control de la oleada
+            listaEnemigos.append(e1);
+        }
+    }
 }
 
 void Nivel1::gameTick()
@@ -86,6 +117,8 @@ void Nivel1::cleanupOffscreen()
 
     // iteramos sobre copia porque vamos a borrar elementos
     auto copia = listaEnemigos;
+    bool Removidos = false;
+
     for (Enemigo* e : copia) {
         if (!e) continue;
         qreal ey = e->scenePos().y();
@@ -95,11 +128,18 @@ void Nivel1::cleanupOffscreen()
             listaEnemigos.removeOne(e);
             escena->removeItem(e);
             e->deleteLater(); // seguro para Qt
-            // programar spawn del siguiente enemigo después de un delay
-            QTimer::singleShot(spawnDelayMs, this, &Nivel1::spawnEnemyAboveView);
+            Removidos = true;
         }
     }
+
+    if (Removidos && listaEnemigos.isEmpty()) {
+        // Lanza nextWave tras spawnDelayMs
+        QTimer::singleShot(spawnDelayMs, this, [this]() {
+            this->spawnearOleada();
+        });
+    }
 }
+
 
 
 
@@ -108,19 +148,10 @@ void Nivel1::cleanupOffscreen()
 */
 void Nivel1::crearObstaculos()
 {
-    int sueloAltura = 40;
+    int sueloAltura = 0;
 
     Obstaculo* suelo = new Obstaculo(0, sceneH - sueloAltura, sceneW, sueloAltura, QColor(139, 69, 19));
     suelo->setBorderColor(Qt::black, 2);
     obstaculos.append(suelo);
     escena->addItem(suelo);
-}
-
-/*
-  Actualización por frame del nivel 1
-*/
-void Nivel1::actualizar()
-{
-    // El jugador se actualiza automáticamente con eventos de teclado
-    // Aquí puedes agregar lógica adicional del nivel (colisiones, etc.)
 }
