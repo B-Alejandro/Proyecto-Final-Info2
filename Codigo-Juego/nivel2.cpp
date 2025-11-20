@@ -87,7 +87,13 @@ void Nivel2::crearEnemigos()
     qreal posEnemigoY = alturaSuelo - sceneH * 0.08;
 
     int sizeEnemigo = sceneH * 0.08;
-    enemigoAtras = new Enemigo(sizeEnemigo, sizeEnemigo, sceneW, sceneH, TipoMovimiento::CON_GRAVEDAD);
+    enemigoAtras =  new Enemigo(sizeEnemigo,
+                                                         sizeEnemigo,
+                                                         sceneW,
+                                                         sceneH,
+                                                         TipoMovimiento::CON_GRAVEDAD,
+                                                         2);
+
     enemigoAtras->setPos(posEnemigoX, posEnemigoY);
     enemigoAtras->setBrush(QBrush(Qt::red));
     enemigoAtras->setSpeed(4);
