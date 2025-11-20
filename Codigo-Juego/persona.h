@@ -1,66 +1,82 @@
+// ============ persona.h ============
 #ifndef PERSONA_H
 #define PERSONA_H
 
-#include <QObject>
 #include <QGraphicsRectItem>
+#include <QTimer>
 #include <QKeyEvent>
-
-class QTimer;
+#include <QPixmap>
 
 enum class TipoMovimiento {
     RECTILINEO,
     CON_GRAVEDAD
 };
 
-/*
-Clase Persona
-Representa un objeto rectangular que puede moverse con o sin gravedad.
-Toda la logica de colision esta delegada a la clase Fisica.
-*/
+enum class EstadoAnimacion {
+    IDLE,
+    CORRIENDO,
+    SALTANDO,
+    MUERTO  // *** NUEVO ***
+};
 
 class Persona : public QObject, public QGraphicsRectItem
 {
     Q_OBJECT
-
 public:
-    Persona(qreal w,
-            qreal h,
-            qreal sceneWidth,
-            qreal sceneHeight,
-            TipoMovimiento tipo);
+    Persona(qreal w, qreal h, qreal sceneWidth, qreal sceneHeight, TipoMovimiento tipo);
 
+    void setSpeed(double s) { speed = s; }
+    double getSpeed() const { return speed; }
     void setTipoMovimiento(TipoMovimiento tipo);
     TipoMovimiento getTipoMovimiento() const { return tipoMovimiento; }
+    bool isOnGround() const { return onGround; }
 
-    void setSpeed(qreal newSpeed) { speed = newSpeed; }
+    // Manejo de sprites
+    void setSprite(const QString& rutaImagen, int anchoFrame, int altoFrame, int numFrames);
+    void setAnimacion(EstadoAnimacion estado);
+    EstadoAnimacion getEstadoAnimacion() const { return estadoActual; }
+
+    // *** NUEVO: Métodos para pausar/reanudar animaciones ***
+    void pausarAnimacion();
+    void reanudarAnimacion();
+    bool estaAnimacionPausada() const { return animacionPausada; }
 
 protected:
     virtual void handleInput();
-
-    // Variables ahora protected para que las clases hijas puedan acceder
-    TipoMovimiento tipoMovimiento;
-    qreal sceneW;
-    qreal sceneH;
-    qreal speed;
-
-    qreal vy;
-    qreal g;
-    bool onGround;
-
-    bool upPressed;
-    bool downPressed;
-    bool leftPressed;
-    bool rightPressed;
-
-private slots:
-    void updateMovement();
-
-private:
     void updateMovementRectilineo();
     void updateMovementConGravedad();
 
-private:
+    // Método virtual para notificar cambios de estado
+    virtual void onEstadoAnimacionCambiado();
+
+    // Renderizado
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+
+    TipoMovimiento tipoMovimiento;
+    double sceneW, sceneH;
+    double speed;
+
+    bool upPressed, downPressed, leftPressed, rightPressed;
+    double vy;
+    double g;
+    bool onGround;
+
     QTimer* timer;
+
+    // Sistema de sprites
+    QPixmap spriteSheet;
+    int anchoSprite;
+    int altoSprite;
+    int totalFrames;
+    int frameActual;
+    bool usarSprites;
+    EstadoAnimacion estadoActual;
+    QTimer* timerAnimacion;
+    bool animacionPausada;  // *** NUEVO ***
+
+private slots:
+    void updateMovement();
+    void actualizarAnimacion();
 };
 
-#endif
+#endif // PERSONA_H

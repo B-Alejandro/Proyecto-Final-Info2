@@ -8,6 +8,7 @@ SOURCES += \
     Obstaculo.cpp \
     enemigo.cpp \
     fisica.cpp \
+    gameoverscreen.cpp \
     juego.cpp \
     jugador.cpp \
     main.cpp \
@@ -21,6 +22,7 @@ HEADERS += \
     Obstaculo.h \
     enemigo.h \
     fisica.h \
+    gameoverscreen.h \
     juego.h \
     jugador.h \
     nivel1.h \
@@ -37,3 +39,5 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 RESOURCES += \
     Recursos.qrc
+
+DISTFILES +=

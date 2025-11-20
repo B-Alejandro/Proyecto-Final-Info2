@@ -75,14 +75,14 @@ bool Enemigo::detectarObstaculoAdelante()
 {
     if (!scene()) return false;
 
-    // Distancia de detección adelante (ajustable)
-    qreal distanciaDeteccion = rect().width() * 2.5; // 2.5 veces el ancho del enemigo
+    // Distancia de detección MÁS CORTA para saltar más cerca del obstáculo
+    qreal distanciaDeteccion = rect().width() * 1.5; // 1.5 veces el ancho del enemigo (antes era 2.5)
 
     // Crear un rectángulo de detección adelante del enemigo
     QRectF zonaDeteccion(
         x() + rect().width(),           // Desde el borde derecho del enemigo
         y(),                             // Misma altura Y
-        distanciaDeteccion,              // Ancho de la zona de detección
+        distanciaDeteccion,              // Ancho de la zona de detección (más corto)
         rect().height()                  // Misma altura que el enemigo
         );
 
