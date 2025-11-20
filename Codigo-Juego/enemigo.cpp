@@ -6,8 +6,10 @@ Enemigo::Enemigo(qreal w,
                  qreal h,
                  qreal sceneWidth,
                  qreal sceneHeight,
-                 TipoMovimiento tipo)
+                 TipoMovimiento tipo,
+                 int nivel)
     : Persona(w, h, sceneWidth, sceneHeight, tipo)
+,   numeroNivel(nivel)
 {
     setBrush(QBrush(Qt::red));
 
@@ -38,6 +40,22 @@ void Enemigo::changeDirection()
 void Enemigo::randomizeDirection()
 {
     QRandomGenerator* rng = QRandomGenerator::global();
+
+    if (numeroNivel == 1){
+        /* Movimiento SOLO hacia abajo, poquito a poquito para dar la sensacion de que los enemigos aparecen
+         * a medida que el mapa va pasando/ el scroll vertical va avanzando.
+         */
+        upPressed    = false;
+        leftPressed  = false;
+        rightPressed = false;
+
+        // Queremos que se mueva muy lento hacia abajo
+        downPressed  = true;
+        speed = 0.0001;   // más lento que lo normal (tú ajustas)
+
+        return;  // No ejecutar la IA normal
+    }
+    // ---------------------------------------
 
     if (tipoMovimiento == TipoMovimiento::RECTILINEO) {
 
