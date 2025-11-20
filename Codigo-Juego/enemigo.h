@@ -13,7 +13,8 @@ public:
             qreal h,
             qreal sceneWidth,
             qreal sceneHeight,
-            TipoMovimiento tipo);
+            TipoMovimiento tipo,
+            int nivel);
 
 protected:
     void handleInput() override;
@@ -30,6 +31,7 @@ private:
     QTimer* aiTimer;
     int changeDirectionTime;
     bool canJump;
+    int numeroNivel;
 };
 
 #endif // ENEMIGO_H
