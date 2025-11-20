@@ -100,3 +100,18 @@ void NivelBase::actualizar()
     // Lógica base de actualización
     // Los niveles pueden sobrescribir este método
 }
+
+/*
+  Limpia el nivel (se llama antes de cambiar de nivel)
+*/
+void NivelBase::limpiar()
+{
+    if (escena) {
+        escena->clear(); // Limpia todos los items de la escena
+    }
+
+    // Limpiar referencias
+    jugador = 0;
+    enemigos.clear();
+    obstaculos.clear();
+}

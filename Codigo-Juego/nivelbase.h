@@ -27,6 +27,7 @@ public:
 
     virtual void cargarElementos();
     virtual void actualizar();
+    virtual void limpiar(); // Limpia el nivel antes de cambiar
 
     QGraphicsScene* getEscena() { return escena; }
 
