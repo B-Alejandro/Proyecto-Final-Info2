@@ -28,6 +28,7 @@ private:
     void tryJumpIfObstacleAhead(); // Nuevo método: salto inteligente
     bool detectarObstaculoAdelante(); // Detecta obstáculos adelante
 
+
     QTimer* aiTimer;
     int changeDirectionTime;
     bool canJump;
