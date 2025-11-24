@@ -41,6 +41,16 @@ public:
     void reanudarAnimacion();
     bool estaAnimacionPausada() const { return animacionPausada; }
 
+    /*RELACIANADOS CON LA VIDA
+     * TANTO DE JUGADOR COMO DE ENEMIGOS
+     */
+    int vida() const { return m_vida; }
+    void setVida(int v) { m_vida = v; }
+    void takeDamage(int dmg);
+
+signals:
+    void died(Persona* who);
+
 protected:
     virtual void handleInput();
     void updateMovementRectilineo();
@@ -77,6 +87,12 @@ protected:
 private slots:
     void updateMovement();
     void actualizarAnimacion();
+
+
+private:
+    //CANTIDAD DE VIDA *****
+    int m_vida = 3;
 };
+
 
 #endif // PERSONA_H

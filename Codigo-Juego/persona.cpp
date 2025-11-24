@@ -3,6 +3,7 @@
 #include "fisica.h"
 #include <QPainter>
 #include <QDebug>
+#include <QGraphicsScene>
 
 Persona::Persona(qreal w, qreal h, qreal sceneWidth, qreal sceneHeight, TipoMovimiento tipo)
     : QGraphicsRectItem(0, 0, w, h),
@@ -228,3 +229,22 @@ void Persona::paint(QPainter* painter, const QStyleOptionGraphicsItem* option, Q
         painter->drawRect(rect());
     }
 }
+
+/*
+ * FUNCION PARA LA ACCION EN LA QUE
+ * UN JUGADOR O UN ENEMIGO RECIBE DAÑO
+ *
+ */
+
+void Persona::takeDamage(int dmg)
+{
+    if (dmg <= 0) return;
+    m_vida -= dmg;
+
+    if (m_vida <= 0) {
+        emit died(this);
+        if (scene()) scene()->removeItem(this);
+        deleteLater();
+    }
+}
+
