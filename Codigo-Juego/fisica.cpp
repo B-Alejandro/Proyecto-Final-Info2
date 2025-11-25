@@ -1,7 +1,8 @@
-// ============ fisica.cpp ============
+// ============ fisica.cpp (CORREGIDO) ============
 #include "fisica.h"
 #include <QGraphicsRectItem>
 #include <QRectF>
+#include <QDebug>
 
 /*
   Funcion: colisionan
@@ -59,16 +60,20 @@ void Fisica::corregirColisionHorizontal(QGraphicsItem* item, QGraphicsItem* otro
     QRectF itemRect = item->sceneBoundingRect();
     QRectF otroRect = otro->sceneBoundingRect();
 
+    // Calcular el offset entre pos() y scenePos()
     double delta = item->scenePos().x() - item->pos().x();
 
-    if (item->x() > prevX) {
+    // Determinar de qué lado ocurrió la colisión
+    double overlapIzq = itemRect.right() - otroRect.left();
+    double overlapDer = otroRect.right() - itemRect.left();
+
+    // Empujar hacia el lado con menor overlap
+    if (overlapIzq < overlapDer) {
+        // Empujar hacia la izquierda
         item->setX(otroRect.left() - itemRect.width() - delta);
-    }
-    else if (item->x() < prevX) {
+    } else {
+        // Empujar hacia la derecha
         item->setX(otroRect.right() - delta);
-    }
-    else {
-        item->setX(prevX);
     }
 }
 
@@ -80,21 +85,39 @@ double Fisica::resolverColisionHorizontal(QGraphicsItem* item,
                                           double prevX,
                                           double sceneW)
 {
+    if (!item) return prevX;
+
     QRectF box = item->boundingRect();
     double w = box.width();
 
+    // Limites de escena
     if (item->x() < 0)
         return 0;
 
     if (item->x() + w > sceneW)
         return sceneW - w;
 
+    // Verificar colisiones con obstáculos
     QList<QGraphicsItem*> colisiones = item->collidingItems();
 
     for (QGraphicsItem* otro : colisiones) {
         if (otro->type() == QGraphicsRectItem::Type) {
-            corregirColisionHorizontal(item, otro, prevX);
-            return item->x();
+            QRectF itemRect = item->sceneBoundingRect();
+            QRectF otroRect = otro->sceneBoundingRect();
+
+            // Solo corregir si hay overlap horizontal significativo
+            double overlapIzq = itemRect.right() - otroRect.left();
+            double overlapDer = otroRect.right() - itemRect.left();
+
+            // Verificar que la colisión es principalmente lateral (no vertical)
+            double overlapVertical = qMin(itemRect.bottom(), otroRect.bottom()) -
+                                     qMax(itemRect.top(), otroRect.top());
+
+            // Solo corregir si hay suficiente overlap vertical (colisión lateral real)
+            if (overlapVertical > itemRect.height() * 0.3) {
+                corregirColisionHorizontal(item, otro, prevX);
+                return item->x();
+            }
         }
     }
 
@@ -111,17 +134,21 @@ double Fisica::resolverColisionVertical(QGraphicsItem* item,
                                         double& vy,
                                         bool& onGround)
 {
+    if (!item) return prevY;
+
     QRectF box = item->boundingRect();
     double h = box.height();
 
     onGround = false;
 
+    // Limite superior
     if (item->y() < 0) {
         vy = 0;
         return 0;
     }
 
-    if (item->y() + h > sceneH) {
+    // Limite inferior (suelo de escena)
+    if (item->y() + h >= sceneH) {
         vy = 0;
         onGround = true;
         return sceneH - h;
@@ -132,19 +159,29 @@ double Fisica::resolverColisionVertical(QGraphicsItem* item,
     for (QGraphicsItem* otro : colisiones) {
         if (otro->type() != QGraphicsRectItem::Type) continue;
 
-        QRectF r = otro->sceneBoundingRect();
+        QRectF itemRect = item->sceneBoundingRect();
+        QRectF otroRect = otro->sceneBoundingRect();
 
-        if (vy > 0) {
-            if (prevY + h <= r.top() + 2) {
+        // Calcular overlaps
+        double overlapArriba = itemRect.bottom() - otroRect.top();
+        double overlapAbajo = otroRect.bottom() - itemRect.top();
+
+        // Colisión desde arriba (aterrizando)
+        if (vy >= 0 && overlapArriba > 0 && overlapArriba < overlapAbajo) {
+            // Verificar que realmente estamos cayendo sobre el obstáculo
+            if (prevY + h <= otroRect.top() + vy + 2) {
                 vy = 0;
                 onGround = true;
-                return r.top() - h;
+                double delta = item->scenePos().y() - item->pos().y();
+                return otroRect.top() - h - delta;
             }
         }
-        else if (vy < 0) {
-            if (prevY >= r.bottom() - 2) {
+        // Colisión desde abajo (golpeando techo)
+        else if (vy < 0 && overlapAbajo > 0 && overlapAbajo < overlapArriba) {
+            if (prevY >= otroRect.bottom() + vy - 2) {
                 vy = 0;
-                return r.bottom();
+                double delta = item->scenePos().y() - item->pos().y();
+                return otroRect.bottom() - delta;
             }
         }
     }
@@ -193,6 +230,7 @@ void Fisica::aplicarMovimientoRectilineo(QGraphicsItem* item,
     double newX = prevX + dx;
     double newY = prevY + dy;
 
+    // Limites de escena
     if (newX < 0) newX = 0;
     if (newX + w > sceneW) newX = sceneW - w;
     if (newY < 0) newY = 0;
@@ -200,6 +238,7 @@ void Fisica::aplicarMovimientoRectilineo(QGraphicsItem* item,
 
     item->setPos(newX, newY);
 
+    // Si hay colisión, volver a posición anterior
     if (hayColisionConObstaculos(item)) {
         item->setPos(prevX, prevY);
     }
@@ -208,6 +247,7 @@ void Fisica::aplicarMovimientoRectilineo(QGraphicsItem* item,
 /*
   Funcion: aplicarMovimientoConGravedad
   Mueve un item aplicando dx y gravedad vertical.
+  CORREGIDO: Mejorada la detección de colisiones para permitir movimiento fluido.
 */
 void Fisica::aplicarMovimientoConGravedad(QGraphicsItem* item,
                                           double dx,
@@ -222,15 +262,38 @@ void Fisica::aplicarMovimientoConGravedad(QGraphicsItem* item,
     double prevX = item->x();
     double prevY = item->y();
 
+    QRectF box = item->boundingRect();
+    double w = box.width();
+
+    // === MOVIMIENTO HORIZONTAL ===
     if (dx != 0) {
-        item->setX(item->x() + dx);
+        double newX = prevX + dx;
+
+        // Limites de escena horizontal
+        if (newX < 0) {
+            newX = 0;
+        } else if (newX + w > sceneW) {
+            newX = sceneW - w;
+        }
+
+        item->setX(newX);
+
+        // Resolver colisiones horizontales
         double fixedX = resolverColisionHorizontal(item, prevX, sceneW);
         item->setX(fixedX);
     }
 
+    // === MOVIMIENTO VERTICAL (GRAVEDAD) ===
     vy += gravedad;
+
+    // Limitar velocidad de caída máxima
+    if (vy > 15) {
+        vy = 15;
+    }
+
     item->setY(item->y() + vy);
 
+    // Resolver colisiones verticales
     double fixedY = resolverColisionVertical(item, prevY, sceneH, vy, onGround);
     item->setY(fixedY);
 }

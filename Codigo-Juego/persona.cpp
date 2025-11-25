@@ -1,27 +1,44 @@
-// ============ persona.cpp ============
 #include "persona.h"
 #include "fisica.h"
 #include <QPainter>
 #include <QDebug>
 #include <QGraphicsScene>
 
+/*
+  Persona.cpp corregido
+  - Restaura el timer interno de movimiento para compatibilidad con Nivel1
+  - Mantiene el sistema de vida mejorado con invulnerabilidad
+  - boundingRect declarado en header y definido aqui
+  - paint dibuja sin escalado para evitar parpadeo
+*/
+
+/* Constructor: inicializacion en el mismo orden que los miembros en persona.h */
 Persona::Persona(qreal w, qreal h, qreal sceneWidth, qreal sceneHeight, TipoMovimiento tipo)
     : QGraphicsRectItem(0, 0, w, h),
     tipoMovimiento(tipo),
     sceneW(sceneWidth),
     sceneH(sceneHeight),
+    speed(5.0),
+    timer(nullptr),
+    spriteSheet(),
+    anchoSprite(static_cast<int>(w)),
+    altoSprite(static_cast<int>(h)),
+    totalFrames(1),
+    frameActual(0),
     usarSprites(false),
     estadoActual(EstadoAnimacion::IDLE),
-    frameActual(0),
-    anchoSprite(0),
-    altoSprite(0),
-    totalFrames(0),
-    animacionPausada(false)  // *** NUEVO ***
+    timerAnimacion(nullptr),
+    animacionPausada(false),
+    mirandoIzquierda(false),
+    vidaActual(100),
+    vidaMaxima(100),
+    invulnerable(false),
+    timerInvulnerabilidad(nullptr)
 {
     setPen(QPen(Qt::NoPen));
     setBrush(QBrush(Qt::blue));
 
-    speed = 5.0;
+    // flags y valores iniciales de entrada/fisica
     upPressed = false;
     downPressed = false;
     leftPressed = false;
@@ -30,26 +47,94 @@ Persona::Persona(qreal w, qreal h, qreal sceneWidth, qreal sceneHeight, TipoMovi
     g = 0.5;
     onGround = false;
 
+    // *** RESTAURADO: timer interno de movimiento ***
     timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &Persona::updateMovement);
-    timer->start(16);
+    timer->start(16); // ~60 FPS
 
+    // timer exclusivo para animacion
     timerAnimacion = new QTimer(this);
     connect(timerAnimacion, &QTimer::timeout, this, &Persona::actualizarAnimacion);
-    timerAnimacion->start(60); // 10 fps para animación
+    timerAnimacion->start(60);
+
+    // timer invulnerabilidad
+    timerInvulnerabilidad = new QTimer(this);
+    timerInvulnerabilidad->setSingleShot(true);
+    connect(timerInvulnerabilidad, &QTimer::timeout, this, &Persona::finalizarInvulnerabilidad);
 
     setFlag(QGraphicsItem::ItemIsFocusable);
     setFlag(QGraphicsItem::ItemSendsGeometryChanges);
     setCacheMode(QGraphicsItem::DeviceCoordinateCache);
+
+    qDebug() << "Persona creada: anchoSprite=" << anchoSprite << " altoSprite=" << altoSprite;
 }
 
+/* boundingRect override para que Qt use el tamano del sprite sin recalculos extra */
+QRectF Persona::boundingRect() const
+{
+    return QRectF(0, 0, anchoSprite, altoSprite);
+}
+
+/* recibir danio: aplica invulnerabilidad corta */
+void Persona::recibirDanio(int cantidad)
+{
+    if (!estaVivo()) return;
+
+    // si ya esta invulnerable, ignorar
+    if (invulnerable) return;
+
+    vidaActual -= cantidad;
+    if (vidaActual < 0) vidaActual = 0;
+
+    qDebug() << "Persona recibió daño:" << cantidad << "Vida restante:" << vidaActual;
+
+    emit vidaCambiada(vidaActual, vidaMaxima);
+
+    // invulnerabilidad corta para evitar daños frames contiguos
+    invulnerable = true;
+    timerInvulnerabilidad->start(200);
+
+    if (vidaActual <= 0) {
+        qDebug() << "Persona murió, eliminando de escena";
+        setAnimacion(EstadoAnimacion::MUERTO);
+
+        // *** DETENER MOVIMIENTO AL MORIR ***
+        if (timer) timer->stop();
+        if (timerAnimacion) timerAnimacion->stop();
+
+        emit murioPersona();
+        emit died(this);  // Para compatibilidad con nivel 1
+
+        // *** ELIMINAR DE LA ESCENA INMEDIATAMENTE ***
+        if (scene()) {
+            scene()->removeItem(this);
+        }
+        deleteLater();
+    }
+}
+
+void Persona::curar(int cantidad)
+{
+    if (!estaVivo()) return;
+
+    vidaActual += cantidad;
+    if (vidaActual > vidaMaxima) vidaActual = vidaMaxima;
+
+    emit vidaCambiada(vidaActual, vidaMaxima);
+}
+
+void Persona::finalizarInvulnerabilidad()
+{
+    invulnerable = false;
+}
+
+/* setSprite: configura parametros de sprite y actualiza rect */
 void Persona::setSprite(const QString& rutaImagen, int anchoFrame, int altoFrame, int numFrames)
 {
     spriteSheet = QPixmap(rutaImagen);
-
     if (spriteSheet.isNull()) {
-        qDebug() << "Error: No se pudo cargar el sprite:" << rutaImagen;
         usarSprites = false;
+        qDebug() << "Persona::setSprite - no se pudo cargar:" << rutaImagen;
         return;
     }
 
@@ -59,73 +144,42 @@ void Persona::setSprite(const QString& rutaImagen, int anchoFrame, int altoFrame
     frameActual = 0;
     usarSprites = true;
 
-    qDebug() << "Sprite cargado:" << rutaImagen << "Frames:" << numFrames;
+    prepareGeometryChange();
+    setRect(0, 0, anchoFrame, altoFrame);
+
+    qDebug() << "Sprite cargado. Frames:" << numFrames
+             << "Ancho:" << anchoFrame
+             << "Alto:" << altoFrame;
 }
 
-void Persona::setAnimacion(EstadoAnimacion estado)
-{
-    if (estadoActual != estado) {
-        estadoActual = estado;
-        frameActual = 0; // Reiniciar animación
-
-        // Notificar a las subclases del cambio
-        onEstadoAnimacionCambiado();
-    }
-}
-
-// Método virtual para que las subclases reaccionen
 void Persona::onEstadoAnimacionCambiado()
 {
-    // Implementación por defecto vacía
-    // Las subclases pueden sobrescribir este método
+    // implementacion por defecto vacia
 }
 
-// *** NUEVO: Pausar animación ***
 void Persona::pausarAnimacion()
 {
     animacionPausada = true;
-    if (timerAnimacion) {
-        timerAnimacion->stop();
-    }
-    if (timer) {
-        timer->stop();  // Detener también el movimiento
-    }
-    qDebug() << "Animación pausada";
+    if (timerAnimacion) timerAnimacion->stop();
+    if (timer) timer->stop();  // También pausar movimiento
 }
 
-// *** NUEVO: Reanudar animación ***
 void Persona::reanudarAnimacion()
 {
     animacionPausada = false;
-    if (timerAnimacion) {
-        timerAnimacion->start(60);
-    }
-    if (timer) {
-        timer->start(16);
-    }
-    qDebug() << "Animación reanudada";
-}
-
-void Persona::actualizarAnimacion()
-{
-    if (!usarSprites || animacionPausada) return;  // *** MODIFICADO ***
-
-    frameActual++;
-    if (frameActual >= totalFrames) {
-        frameActual = 0;
-    }
-
-    update(); // Redibuja el item
+    if (timerAnimacion) timerAnimacion->start(60);
+    if (timer) timer->start(16);  // También reanudar movimiento
 }
 
 void Persona::handleInput()
 {
-    // Método virtual para que las subclases puedan sobreescribir
+    // metodo virtual, sobrescrito por clases derivadas
 }
 
 void Persona::updateMovement()
 {
-    if (animacionPausada) return;  // *** NUEVO ***
+    // *** NO actualizar si está pausado o muerto ***
+    if (animacionPausada || estadoActual == EstadoAnimacion::MUERTO) return;
 
     handleInput();
 
@@ -141,19 +195,20 @@ void Persona::updateMovementRectilineo()
     double dx = 0;
     double dy = 0;
 
-    if (upPressed) dy -= speed + 3;
-    if (downPressed) dy += speed + 3;
-    if (leftPressed) dx -= speed + 3;
-    if (rightPressed) dx += speed + 3;
-
-    // Actualizar animación según movimiento
-    if (dx != 0 || dy != 0) {
-        setAnimacion(EstadoAnimacion::CORRIENDO);
-    } else {
-        setAnimacion(EstadoAnimacion::IDLE);
+    if (upPressed) dy -= speed;
+    if (downPressed) dy += speed;
+    if (leftPressed) {
+        dx -= speed;
+        mirandoIzquierda = true;
+    }
+    if (rightPressed) {
+        dx += speed;
+        mirandoIzquierda = false;
     }
 
-    // Delegar todo el manejo de colisiones a Fisica
+    if (dx != 0 || dy != 0) setAnimacion(EstadoAnimacion::CORRIENDO);
+    else setAnimacion(EstadoAnimacion::IDLE);
+
     Fisica::aplicarMovimientoRectilineo(this, dx, dy, sceneW, sceneH);
 }
 
@@ -161,28 +216,44 @@ void Persona::updateMovementConGravedad()
 {
     double dx = 0;
 
-    // *** SIN MOVIMIENTO HORIZONTAL ***
-    // El jugador solo salta verticalmente
-    // if (leftPressed) dx -= speed + 6;
-    // if (rightPressed) dx += speed + 6;
-
-    // Actualizar animación según estado
-    EstadoAnimacion nuevoEstado;
-
-    // *** MODIFICADO: No cambiar estado si está muerto ***
-    if (estadoActual == EstadoAnimacion::MUERTO) {
-        nuevoEstado = EstadoAnimacion::MUERTO;
-    } else if (!onGround) {
-        nuevoEstado = EstadoAnimacion::SALTANDO;
-    } else {
-        // Siempre corriendo cuando está en el suelo
-        nuevoEstado = EstadoAnimacion::CORRIENDO;
+    if (leftPressed) {
+        dx -= speed;
+        mirandoIzquierda = true;
+    }
+    if (rightPressed) {
+        dx += speed;
+        mirandoIzquierda = false;
     }
 
-    setAnimacion(nuevoEstado);
+    if (estadoActual == EstadoAnimacion::MUERTO) return;
 
-    // Delegar todo el manejo de colisiones y gravedad a Fisica
+    EstadoAnimacion nuevoEstado;
+    if (!onGround) nuevoEstado = EstadoAnimacion::SALTANDO;
+    else if (dx != 0) nuevoEstado = EstadoAnimacion::CORRIENDO;
+    else nuevoEstado = EstadoAnimacion::IDLE;
+
+    if (estadoActual != nuevoEstado) setAnimacion(nuevoEstado);
+
     Fisica::aplicarMovimientoConGravedad(this, dx, vy, g, onGround, sceneW, sceneH);
+}
+
+void Persona::setAnimacion(EstadoAnimacion estado)
+{
+    if (estadoActual != estado) {
+        estadoActual = estado;
+        frameActual = 0;
+        onEstadoAnimacionCambiado();
+    }
+}
+
+void Persona::actualizarAnimacion()
+{
+    if (!usarSprites || animacionPausada) return;
+
+    frameActual++;
+    if (frameActual >= totalFrames) frameActual = 0;
+
+    update(); // solicita repaint
 }
 
 void Persona::setTipoMovimiento(TipoMovimiento tipo)
@@ -190,61 +261,35 @@ void Persona::setTipoMovimiento(TipoMovimiento tipo)
     tipoMovimiento = tipo;
 }
 
-void Persona::paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget)
+/* paint: dibuja el frame sin escalado y maneja flip horizontal */
+void Persona::paint(QPainter* painter, const QStyleOptionGraphicsItem*, QWidget*)
 {
-    Q_UNUSED(option)
-    Q_UNUSED(widget)
-
     if (usarSprites && !spriteSheet.isNull()) {
 
-        /*
-          Se obtiene el cuadro del spritesheet.
-          frameActual indica cual cuadro se usa.
-        */
         int srcX = frameActual * anchoSprite;
         int srcY = 0;
-        int srcW = anchoSprite;
-        int srcH = altoSprite;
 
-        /*
-          El destino se ajusta al tamano del rect del item.
-          Esto garantiza que el sprite se escale y siempre se
-          dibuje dentro de los limites del objeto grafico.
-        */
-        QRectF dstRect = rect();
+        if (mirandoIzquierda) {
+            painter->save();
+            painter->translate(anchoSprite / 2.0, altoSprite / 2.0);
+            painter->scale(-1, 1);
+            painter->translate(-anchoSprite / 2.0, -altoSprite / 2.0);
+        }
 
-        /*
-          Se dibuja el pixmap escalado.
-          Qt hace la transformacion de manera interna.
-        */
-        painter->drawPixmap(
-            dstRect,            // rect destino escalado
-            spriteSheet,        // imagen completa
-            QRect(srcX, srcY, srcW, srcH) // rect fuente en el spritesheet
-            );
-    }
-    else {
+        painter->drawPixmap(0, 0, spriteSheet,
+                            srcX, srcY,
+                            anchoSprite, altoSprite);
+
+        if (mirandoIzquierda) painter->restore();
+
+        // Efecto visual de invulnerabilidad
+        if (invulnerable) {
+            painter->fillRect(0, 0, anchoSprite, altoSprite, QColor(255, 255, 255, 120));
+        }
+
+    } else {
         painter->setBrush(brush());
         painter->setPen(pen());
         painter->drawRect(rect());
     }
 }
-
-/*
- * FUNCION PARA LA ACCION EN LA QUE
- * UN JUGADOR O UN ENEMIGO RECIBE DAÑO
- *
- */
-
-void Persona::takeDamage(int dmg)
-{
-    if (dmg <= 0) return;
-    m_vida -= dmg;
-
-    if (m_vida <= 0) {
-        if (scene()) scene()->removeItem(this);
-        emit died(this);
-        deleteLater();
-    }
-}
-

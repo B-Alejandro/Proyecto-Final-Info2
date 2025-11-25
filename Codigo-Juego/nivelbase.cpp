@@ -97,9 +97,21 @@ void NivelBase::crearJugador(qreal x, qreal y, TipoMovimiento tipo)
 */
 void NivelBase::actualizar()
 {
-    // Lógica base de actualización
-    // Los niveles pueden sobrescribir este método
+    // actualizar movimiento del jugador
+    if (jugador) {
+        jugador->updateMovement();
+    }
+
+    // actualizar movimiento de cada enemigo
+    for (Enemigo* e : enemigos) {
+        if (e) {
+            e->updateMovement();
+        }
+    }
+
+    // si despues agregas colisiones globales, van aqui
 }
+
 
 /*
   Limpia el nivel (se llama antes de cambiar de nivel)

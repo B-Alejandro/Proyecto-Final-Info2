@@ -1,4 +1,3 @@
-
 // ============ nivel1.cpp ============
 #include "nivel1.h"
 #include "juego.h"
@@ -41,25 +40,21 @@ void Nivel1::configurarNivel()
 
 void Nivel1::crearEnemigos()
 {
-    // Implementar creación de enemigos específicos del nivel 1
-    //int size = sceneH * 0.12;
-    QTimer* gameTimer = nullptr;            // tick principal
-    gameTimer = new QTimer(this);
+    // Timer principal del nivel
+    QTimer* gameTimer = new QTimer(this);
     connect(gameTimer, &QTimer::timeout, this, &Nivel1::gameTick);
     gameTimer->start(16); // ~60 FPS
 
-
-
     spawnearOleada();
-
 }
 
 void Nivel1::spawnearOleada()
 {
     int size = vistaAlto * 0.1;
     if (!escena) return;
+
     int tipoOleada = 0;
-    //int tipoOleada = QRandomGenerator::global()->bounded(2);  // 0 a 5
+    //int tipoOleada = QRandomGenerator::global()->bounded(3);  // 0, 1 o 2
 
     if(tipoOleada == 0){
         int posX = 50;
@@ -67,77 +62,86 @@ void Nivel1::spawnearOleada()
         for (int i = 0; i < 8; ++i) {
             posX += 150;
 
-            Enemigo* e1 = new Enemigo(size, size, sceneW, sceneH, TipoMovimiento::RECTILINEO,1);
-            e1->setPos(posX, sceneH * 0);
-            e1->setSpeed(0);
+            Enemigo* e1 = new Enemigo(size, size, sceneW, sceneH, TipoMovimiento::RECTILINEO, 1);
+            e1->setPos(posX, sceneH * 0);  // Spawn en la parte superior
+            // *** NO LLAMAR setSpeed(0) - dejamos que use la velocidad del constructor ***
+
             enemigos.append(e1);
             escena->addItem(e1);
 
             // guardamos referencias para control de la oleada
             listaEnemigos.append(e1);
             connect(e1, &Persona::died, this, &Nivel1::onEnemyDied);
+
+            qDebug() << "Enemigo spawneado en:" << e1->x() << e1->y() << "speed:" << e1->getSpeed();
         }
     }
     else if(tipoOleada == 1){
         int posX = 300;
-        double posY[8] = {vistaAlto*0.1,vistaAlto*0.15,vistaAlto*0.2,vistaAlto*0.25,vistaAlto*0.25,vistaAlto*0.2,vistaAlto*0.15,vistaAlto*0.1};
+        double posY[8] = {vistaAlto*0.1, vistaAlto*0.15, vistaAlto*0.2, vistaAlto*0.25,
+                          vistaAlto*0.25, vistaAlto*0.2, vistaAlto*0.15, vistaAlto*0.1};
 
         for (int i = 0; i < 8; ++i) {
             posX += 100;
 
-            Enemigo* e1 = new Enemigo(size, size, sceneW, sceneH, TipoMovimiento::RECTILINEO,1);
+            Enemigo* e1 = new Enemigo(size, size, sceneW, sceneH, TipoMovimiento::RECTILINEO, 1);
             e1->setPos(posX, posY[i]);
-            e1->setSpeed(0);
+            // *** NO llamar setSpeed(0) ***
+
             enemigos.append(e1);
             escena->addItem(e1);
 
-            // guardamos referencias para control de la oleada
             listaEnemigos.append(e1);
-            // Conectar señal de muerte del enemigo hacia Nivel1
             connect(e1, &Persona::died, this, &Nivel1::onEnemyDied);
         }
     }
     else if(tipoOleada == 2){
         int posX = 100;
-        double posY[8] = {sceneH*0.1,sceneH*0.15,sceneH*0.2,sceneH*0.25,sceneH*0.25,sceneH*0.2,sceneH*0.15,sceneH*0.1};
+        double posY[8] = {sceneH*0.1, sceneH*0.15, sceneH*0.2, sceneH*0.25,
+                          sceneH*0.25, sceneH*0.2, sceneH*0.15, sceneH*0.1};
+
         for (int i = 0; i < 8; ++i) {
             posX += 100;
 
-            Enemigo* e1 = new Enemigo(size, size, sceneW, sceneH, TipoMovimiento::RECTILINEO,1);
+            Enemigo* e1 = new Enemigo(size, size, sceneW, sceneH, TipoMovimiento::RECTILINEO, 1);
             e1->setPos(posX, posY[i]);
-            e1->setSpeed(0);
+            // *** NO llamar setSpeed(0) ***
+
             enemigos.append(e1);
             escena->addItem(e1);
 
-            // guardamos referencias para control de la oleada
             listaEnemigos.append(e1);
-            // Conectar señal de muerte del enemigo hacia Nivel1
             connect(e1, &Persona::died, this, &Nivel1::onEnemyDied);
         }
     }
+
+    qDebug() << "Oleada spawneada. Total enemigos:" << listaEnemigos.size();
 }
 
 void Nivel1::gameTick()
 {
-    // avanza items (llama a Enemy::advance())
-    escena->advance();
+    // *** CRÍTICO: advance() mueve todos los items que implementan advance() ***
+    // Esto incluye los Proyectiles
+    if (escena) {
+        escena->advance();
+    }
 
-    // cleanup: elimina enemigos que llegaron al fondo visible
-    cleanupOffscreen();
+    // Revisar colisiones
     revisarColision();
+
+    // Eliminar enemigos que salieron de la pantalla
+    cleanupOffscreen();
 }
 
 void Nivel1::cleanupOffscreen()
 {
     if (!escena) return;
 
-    //QRectF visible = vista->mapToScene(vista->viewport()->rect()).boundingRect();
-    //qreal bottom = visible.bottom();
     qreal cleanupMargin = 100; // margen extra
 
     // iteramos sobre copia porque vamos a borrar elementos
     auto copia = listaEnemigos;
-    bool Removidos = false;
+    bool removidos = false;
 
     for (Enemigo* e : copia) {
         if (!e) continue;
@@ -145,14 +149,19 @@ void Nivel1::cleanupOffscreen()
 
         // si el enemigo pasó el fondo visible + margen
         if (ey > sceneH - cleanupMargin) {
+            qDebug() << "Enemigo fuera de pantalla en y:" << ey << "sceneH:" << sceneH;
+
             listaEnemigos.removeOne(e);
+            enemigos.removeOne(e);
             escena->removeItem(e);
-            e->deleteLater(); // seguro para Qt
-            Removidos = true;
+            e->deleteLater();
+            removidos = true;
         }
     }
 
-    if (Removidos && listaEnemigos.isEmpty()) {
+    if (removidos && listaEnemigos.isEmpty()) {
+        qDebug() << "Todos los enemigos eliminados. Spawneando nueva oleada en" << spawnDelayMs << "ms";
+
         // Lanza nextWave tras spawnDelayMs
         QTimer::singleShot(spawnDelayMs, this, [this]() {
             this->spawnearOleada();
@@ -161,50 +170,40 @@ void Nivel1::cleanupOffscreen()
 }
 
 /*
- * Detectar colisiones entre enmigos y jugador para aplicar las penalizaciones necesarias
- *
+ * Detectar colisiones entre enemigos y jugador
  */
 void Nivel1::revisarColision()
 {
-
     if (!jugador) return;
 
     QRectF playerRect = jugador->sceneBoundingRect();
 
-    // iteramos sobre copia porque onEnemyRemoved() puede modificar la lista
+    // iteramos sobre copia porque colisionDetectada() puede modificar la lista
     auto copia = listaEnemigos;
     for (Enemigo* e : copia) {
         if (!e) continue;
 
-        // 1) filtro rápido: bounding rect overlap?
-        if (playerRect.intersects(e->sceneBoundingRect())) {
-            colisionDetectada(e);
-        }
-
-        // 2) comprobación precisa: usa collidesWithItem con la forma (shape)
-        // Usa IntersectsItemShape para basarse en shape() en lugar de boundingRect
+        // Comprobación precisa con shape
         if (jugador->collidesWithItem(e, Qt::IntersectsItemShape)) {
-            // ¡Colisión detectada!
-            colisionDetectada(e);        // función que maneja daño/efectos
-            // onPlayerHit puede llamar a onEnemyRemoved(e) si quieres borrar enemigo
+            colisionDetectada(e);
         }
     }
 }
+
 void Nivel1::colisionDetectada(Enemigo* e)
 {
     if (!e || !jugador) return;
 
-    // ejemplo: bajar vida del jugador (suponiendo que jugador tiene metodo damage())
-    // jugador->damage(1);
+    qDebug() << "¡Colisión detectada con enemigo!";
 
-    // eliminar enemigo y mantener listas consistentes
-    if (!e) return;
+    // Aplicar daño al jugador
+    jugador->recibirDanio(10);
 
-    // Eliminarlo de la lista de enemigos del juego
+    // Eliminar enemigo
     listaEnemigos.removeOne(e);
+    enemigos.removeOne(e);
     escena->removeItem(e);
-    e->deleteLater(); // seguro para Qt
-    // opcional: reproducir sonido, animación, efectos, etc.
+    e->deleteLater();
 }
 
 /*
@@ -212,6 +211,7 @@ void Nivel1::colisionDetectada(Enemigo* e)
 */
 void Nivel1::crearObstaculos()
 {
+    // Sin suelo visible en este nivel
     int sueloAltura = 0;
 
     Obstaculo* suelo = new Obstaculo(0, sceneH - sueloAltura, sceneW, sueloAltura, QColor(139, 69, 19));
@@ -223,14 +223,13 @@ void Nivel1::crearObstaculos()
 void Nivel1::onEnemyDied(Persona* p)
 {
     Enemigo* e = dynamic_cast<Enemigo*>(p);
-    if (!e) return;  // No es enemigo, ignorar.
+    if (!e) return;
 
-    // 1. Eliminar de la lista
+    qDebug() << "Señal died recibida de enemigo";
+
+    // Eliminar de la lista
     listaEnemigos.removeOne(e);
+    enemigos.removeOne(e);
 
-
-    qDebug() << "Enemigo eliminado correctamente. Enemigos restantes:" << listaEnemigos.size();
-
-    // 2. Aquí NO llamas delete, ya se hace en takeDamage() con deleteLater()
-    //    Así que NO toques memoria, ya está hecho.
+    qDebug() << "Enemigo eliminado. Enemigos restantes:" << listaEnemigos.size();
 }

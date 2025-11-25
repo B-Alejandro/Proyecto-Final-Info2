@@ -3,9 +3,9 @@
 #include <QPainter>
 #include <QGraphicsScene>
 
-    Proyectil::Proyectil(qreal width, qreal height,
-                         qreal speed, int dirY,
-                         QGraphicsItem* parent)
+Proyectil::Proyectil(qreal width, qreal height,
+                     qreal speed, int dirY,
+                     QGraphicsItem* parent)
     : QGraphicsObject(parent),
     m_w(width),
     m_h(height),
@@ -51,7 +51,8 @@ void Proyectil::advance(int phase)
         if (!p) continue;
         if (p == m_owner) continue;  // no dañar al que disparó
 
-        p->takeDamage(1);
+        // CORRECCIÓN: usar recibirDanio en lugar de takeDamage
+        p->recibirDanio(1);
 
         if (scene()) scene()->removeItem(this);
         deleteLater();
