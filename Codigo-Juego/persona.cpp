@@ -6,9 +6,9 @@
 
 /*
   Persona.cpp corregido
-  - constructor con orden de inicializacion consistente con persona.h
+  - Restaura el timer interno de movimiento para compatibilidad con Nivel1
+  - Mantiene el sistema de vida mejorado con invulnerabilidad
   - boundingRect declarado en header y definido aqui
-  - no se crea timer interno de movimiento (timer = nullptr)
   - paint dibuja sin escalado para evitar parpadeo
 */
 
@@ -19,7 +19,7 @@ Persona::Persona(qreal w, qreal h, qreal sceneWidth, qreal sceneHeight, TipoMovi
     sceneW(sceneWidth),
     sceneH(sceneHeight),
     speed(5.0),
-    timer(nullptr),               // no timer de movimiento interno
+    timer(nullptr),
     spriteSheet(),
     anchoSprite(static_cast<int>(w)),
     altoSprite(static_cast<int>(h)),
@@ -47,6 +47,11 @@ Persona::Persona(qreal w, qreal h, qreal sceneWidth, qreal sceneHeight, TipoMovi
     g = 0.5;
     onGround = false;
 
+    // *** RESTAURADO: timer interno de movimiento ***
+    timer = new QTimer(this);
+    connect(timer, &QTimer::timeout, this, &Persona::updateMovement);
+    timer->start(16); // ~60 FPS
+
     // timer exclusivo para animacion
     timerAnimacion = new QTimer(this);
     connect(timerAnimacion, &QTimer::timeout, this, &Persona::actualizarAnimacion);
@@ -59,6 +64,7 @@ Persona::Persona(qreal w, qreal h, qreal sceneWidth, qreal sceneHeight, TipoMovi
 
     setFlag(QGraphicsItem::ItemIsFocusable);
     setFlag(QGraphicsItem::ItemSendsGeometryChanges);
+    setCacheMode(QGraphicsItem::DeviceCoordinateCache);
 
     qDebug() << "Persona creada: anchoSprite=" << anchoSprite << " altoSprite=" << altoSprite;
 }
@@ -80,6 +86,8 @@ void Persona::recibirDanio(int cantidad)
     vidaActual -= cantidad;
     if (vidaActual < 0) vidaActual = 0;
 
+    qDebug() << "Persona recibió daño:" << cantidad << "Vida restante:" << vidaActual;
+
     emit vidaCambiada(vidaActual, vidaMaxima);
 
     // invulnerabilidad corta para evitar daños frames contiguos
@@ -87,9 +95,21 @@ void Persona::recibirDanio(int cantidad)
     timerInvulnerabilidad->start(200);
 
     if (vidaActual <= 0) {
+        qDebug() << "Persona murió, eliminando de escena";
         setAnimacion(EstadoAnimacion::MUERTO);
+
+        // *** DETENER MOVIMIENTO AL MORIR ***
+        if (timer) timer->stop();
+        if (timerAnimacion) timerAnimacion->stop();
+
         emit murioPersona();
         emit died(this);  // Para compatibilidad con nivel 1
+
+        // *** ELIMINAR DE LA ESCENA INMEDIATAMENTE ***
+        if (scene()) {
+            scene()->removeItem(this);
+        }
+        deleteLater();
     }
 }
 
@@ -141,12 +161,14 @@ void Persona::pausarAnimacion()
 {
     animacionPausada = true;
     if (timerAnimacion) timerAnimacion->stop();
+    if (timer) timer->stop();  // También pausar movimiento
 }
 
 void Persona::reanudarAnimacion()
 {
     animacionPausada = false;
     if (timerAnimacion) timerAnimacion->start(60);
+    if (timer) timer->start(16);  // También reanudar movimiento
 }
 
 void Persona::handleInput()
@@ -156,7 +178,9 @@ void Persona::handleInput()
 
 void Persona::updateMovement()
 {
-    // metodo disponible por compatibilidad; el update global lo llama NivelBase
+    // *** NO actualizar si está pausado o muerto ***
+    if (animacionPausada || estadoActual == EstadoAnimacion::MUERTO) return;
+
     handleInput();
 
     if (tipoMovimiento == TipoMovimiento::RECTILINEO) {
@@ -232,6 +256,11 @@ void Persona::actualizarAnimacion()
     update(); // solicita repaint
 }
 
+void Persona::setTipoMovimiento(TipoMovimiento tipo)
+{
+    tipoMovimiento = tipo;
+}
+
 /* paint: dibuja el frame sin escalado y maneja flip horizontal */
 void Persona::paint(QPainter* painter, const QStyleOptionGraphicsItem*, QWidget*)
 {
@@ -253,6 +282,7 @@ void Persona::paint(QPainter* painter, const QStyleOptionGraphicsItem*, QWidget*
 
         if (mirandoIzquierda) painter->restore();
 
+        // Efecto visual de invulnerabilidad
         if (invulnerable) {
             painter->fillRect(0, 0, anchoSprite, altoSprite, QColor(255, 255, 255, 120));
         }
@@ -262,9 +292,4 @@ void Persona::paint(QPainter* painter, const QStyleOptionGraphicsItem*, QWidget*
         painter->setPen(pen());
         painter->drawRect(rect());
     }
-}
-
-void Persona::setTipoMovimiento(TipoMovimiento tipo)
-{
-    tipoMovimiento = tipo;
 }

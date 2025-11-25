@@ -1,12 +1,18 @@
-// enemigo.cpp - CORREGIDO
 #include "enemigo.h"
 #include "obstaculo.h"
+#include "jugador.h"
 #include <QBrush>
 #include <QRandomGenerator>
 #include <QGraphicsScene>
-#include <QDebug>
 #include <QTimer>
-#include "jugador.h"
+#include <QDebug>
+
+/*
+  Constructor unificado
+
+  nivel == 1  -> IA simple, movimiento rectilineo descendente, poca vida
+  nivel != 1  -> IA avanzada: persecucion, salto inteligente, sprites
+*/
 Enemigo::Enemigo(qreal w,
                  qreal h,
                  qreal sceneWidth,
@@ -19,27 +25,49 @@ Enemigo::Enemigo(qreal w,
 {
     setBrush(QBrush(Qt::red));
 
-    // Sin velocidad inicial
-    speed = 0;
-
     changeDirectionTime = 2000;
     canJump = true;
 
-    // Timer de IA (por si se necesita en el futuro)
     aiTimer = new QTimer(this);
     connect(aiTimer, &QTimer::timeout, this, &Enemigo::changeDirection);
-    // NO iniciar el timer hasta que se active
 
-    qDebug() << "Enemigo creado en modo inactivo";
+    if (numeroNivel == 1)
+    {
+        // *** NIVEL 1: Configuración para movimiento descendente ***
+        upPressed = false;
+        leftPressed = false;
+        rightPressed = false;
+        downPressed = true;  // Siempre moviéndose hacia abajo
+        speed = 5.0;  // Velocidad visible
+
+        // *** CRÍTICO: Configurar vida baja para nivel 1 ***
+        setVida(3);  // Mueren con 1 hit
+
+        qDebug() << "Enemigo Nivel 1 creado en pos:" << x() << y()
+                 << "con speed:" << speed
+                 << "vida:" << getVida()
+                 << "downPressed:" << downPressed;
+    }
+    else
+    {
+        // *** NIVEL 2+: Modo inactivo hasta activar persecución ***
+        speed = 0;
+        setVida(500);  // Más vida para niveles avanzados
+        aiTimer->start(changeDirectionTime);
+        qDebug() << "Enemigo creado en modo inactivo con vida:" << getVida();
+    }
 }
 
+/*
+  Carga de sprites para niveles que los necesitan (nivel 2)
+*/
 void Enemigo::cargarSprites()
 {
-    qDebug() << "=== CARGANDO SPRITES DEL ENEMIGO ===";
+    qDebug() << "Cargando sprites enemigo";
 
     QString rutaIdle  = ":/Recursos/Sprites/Soldier_Idle.png";
     QString rutaRun   = ":/Recursos/Sprites/Run_soldier.png";
-    QString rutaJump  = ":/Recursos/Sprites/Run_soldier.png";  // Usar run como jump
+    QString rutaJump  = ":/Recursos/Sprites/Run_soldier.png";
     QString rutaDeath = ":/Recursos/Sprites/Attacck.png";
 
     spriteIdle   = QPixmap(rutaIdle);
@@ -47,79 +75,46 @@ void Enemigo::cargarSprites()
     spriteSaltar = QPixmap(rutaJump);
     spriteMuerte = QPixmap(rutaDeath);
 
-    // Validar carga de sprites
-    if (spriteIdle.isNull()) {
-        qDebug() << " ERROR: Sprite Idle no cargado";
-        spriteIdle = spriteCorrer;
-    } else {
-        qDebug() << " Sprite IDLE cargado:" << spriteIdle.width() << "x" << spriteIdle.height();
-    }
+    if (spriteIdle.isNull()) spriteIdle = spriteCorrer;
+    if (spriteSaltar.isNull()) spriteSaltar = spriteCorrer;
+    if (spriteMuerte.isNull()) spriteMuerte = spriteCorrer;
 
-    if (spriteCorrer.isNull()) {
-        qDebug() << " ERROR: Sprite Correr no cargado";
-        return;
-    } else {
-        qDebug() << " Sprite CORRER cargado:" << spriteCorrer.width() << "x" << spriteCorrer.height();
-    }
-
-    if (spriteSaltar.isNull()) {
-        spriteSaltar = spriteCorrer;
-        qDebug() << " Sprite SALTAR usando fallback";
-    } else {
-        qDebug() << " Sprite SALTAR cargado";
-    }
-
-    if (spriteMuerte.isNull()) {
-        spriteMuerte = spriteCorrer;
-        qDebug() << " Sprite MUERTE usando fallback";
-    } else {
-        qDebug() << " Sprite MUERTE cargado";
-    }
-
-    // Configurar sprite inicial (IDLE)
     setSprite(rutaIdle, 128, 128, 8);
     estadoActual = EstadoAnimacion::IDLE;
     frameActual = 0;
-
-    qDebug() << "=== SPRITES DEL ENEMIGO CARGADOS ===\n";
 }
 
 void Enemigo::cambiarSpritePorEstado()
 {
     EstadoAnimacion estado = getEstadoAnimacion();
 
-    if (estado == EstadoAnimacion::MUERTO && !spriteMuerte.isNull()) {
-        if (spriteSheet.cacheKey() != spriteMuerte.cacheKey()) {
-            spriteSheet = spriteMuerte;
-            frameActual = 0;
-            totalFrames = 8;
-            qDebug() << "Sprite MUERTE activado";
-        }
+    if (estado == EstadoAnimacion::MUERTO)
+    {
+        spriteSheet = spriteMuerte;
+        frameActual = 0;
+        totalFrames = 8;
+        return;
     }
-    else if (estado == EstadoAnimacion::SALTANDO && !spriteSaltar.isNull()) {
-        if (spriteSheet.cacheKey() != spriteSaltar.cacheKey()) {
-            spriteSheet = spriteSaltar;
-            frameActual = 0;
-            totalFrames = 8;
-            qDebug() << "Sprite SALTAR activado";
-        }
+
+    if (estado == EstadoAnimacion::SALTANDO)
+    {
+        spriteSheet = spriteSaltar;
+        frameActual = 0;
+        totalFrames = 8;
+        return;
     }
-    else if (estado == EstadoAnimacion::CORRIENDO && !spriteCorrer.isNull()) {
-        if (spriteSheet.cacheKey() != spriteCorrer.cacheKey()) {
-            spriteSheet = spriteCorrer;
-            frameActual = 0;
-            totalFrames = 8;
-            qDebug() << "Sprite CORRER activado";
-        }
+
+    if (estado == EstadoAnimacion::CORRIENDO)
+    {
+        spriteSheet = spriteCorrer;
+        frameActual = 0;
+        totalFrames = 8;
+        return;
     }
-    else if (estado == EstadoAnimacion::IDLE && !spriteIdle.isNull()) {
-        if (spriteSheet.cacheKey() != spriteIdle.cacheKey()) {
-            spriteSheet = spriteIdle;
-            frameActual = 0;
-            totalFrames = 8;
-            qDebug() << "Sprite IDLE activado";
-        }
-    }
+
+    spriteSheet = spriteIdle;
+    frameActual = 0;
+    totalFrames = 8;
 }
 
 void Enemigo::onEstadoAnimacionCambiado()
@@ -129,50 +124,66 @@ void Enemigo::onEstadoAnimacionCambiado()
 
 void Enemigo::activarAnimacionMuerte()
 {
-    qDebug() << "Activando animacion de muerte del enemigo";
     setAnimacion(EstadoAnimacion::MUERTO);
 
-    QTimer::singleShot(800, this, [this]() {
-        pausarAnimacion();
-        qDebug() << "Animacion de muerte del enemigo completada";
-    });
+    QTimer::singleShot(800, this, [this]()
+                       {
+                           pausarAnimacion();
+                       });
 }
 
+/*
+  Activar IA de persecucion (solo nivel 2+)
+*/
 void Enemigo::activarPersecucion()
 {
-    if (!enemigoActivo) {
-        qDebug() << "Activando persecución del enemigo";
+    if (numeroNivel == 1) return;
+
+    if (!enemigoActivo)
+    {
         enemigoActivo = true;
-        speed = 6;  // Velocidad aumentada de 4 a 6
+        speed = 6;
 
-        // Iniciar timer de IA si se necesita
-        if (aiTimer && !aiTimer->isActive()) {
-            aiTimer->start(changeDirectionTime);
-        }
-
-        // Asegurar que está en el suelo al activarse
-        if (onGround) {
-            qDebug() << "Enemigo en el suelo, gravedad = 0";
+        if (onGround)
             vy = 0;
-        }
 
-        qDebug() << "Enemigo activado - Speed:" << speed << "onGround:" << onGround;
+        if (!aiTimer->isActive())
+            aiTimer->start(changeDirectionTime);
     }
 }
+
+/*
+  IA principal de movimiento - SOBRESCRIBE handleInput de Persona
+*/
 void Enemigo::handleInput()
 {
-    // gravedad siempre
-    if (!enemigoActivo) return;
+    if (numeroNivel == 1)
+    {
+        // *** NIVEL 1: Asegurar que siempre está bajando ***
+        // Las direcciones ya están configuradas, solo aseguramos que no cambien
+        downPressed = true;
+        upPressed = false;
+        leftPressed = false;
+        rightPressed = false;
 
-    // obtener jugador
+        // Debug cada cierto tiempo para verificar
+        static int debugCounter = 0;
+        if (debugCounter++ % 60 == 0) {
+            qDebug() << "Enemigo en:" << x() << y() << "speed:" << speed;
+        }
+        return;
+    }
+
+    // *** NIVEL 2+: IA de persecución ***
+    if (!enemigoActivo) return;
     if (!scene()) return;
 
-    QList<QGraphicsItem*> lista = scene()->items();
     QGraphicsItem* objetivo = nullptr;
-
-    for (QGraphicsItem* item : lista) {
+    for (QGraphicsItem* item : scene()->items())
+    {
         Jugador* j = dynamic_cast<Jugador*>(item);
-        if (j) {
+        if (j)
+        {
             objetivo = j;
             break;
         }
@@ -180,101 +191,116 @@ void Enemigo::handleInput()
 
     if (!objetivo) return;
 
-    // perseguir al jugador SIEMPRE
     qreal dx = objetivo->x() - x();
 
-    if (dx > 0) {
+    if (dx > 0)
+    {
         rightPressed = true;
-        leftPressed  = false;
+        leftPressed = false;
         mirandoIzquierda = false;
-    } else {
+    }
+    else
+    {
         rightPressed = false;
-        leftPressed  = true;
+        leftPressed = true;
         mirandoIzquierda = true;
     }
 
-    // saltar si hay obstaculo delante
-    if (enemigoActivo &&
-        tipoMovimiento == TipoMovimiento::CON_GRAVEDAD &&
-        canJump &&
-        onGround)
-    {
+    if (canJump && onGround)
         tryJumpIfObstacleAhead();
-    }
 }
 
 void Enemigo::changeDirection()
 {
-    if (enemigoActivo) {
-        randomizeDirection();
-    }
-}
-
-void Enemigo::randomizeDirection()
-{
-    // Para nivel 2, la dirección la maneja nivel2.cpp
-    // Esta función puede quedar vacía o hacer ajustes menores
-
-    if (numeroNivel == 1) {
-        upPressed = false;
-        leftPressed = false;
-        rightPressed = false;
-        downPressed = true;
-        speed = 0.0001;
+    if (numeroNivel == 1)
+    {
+        // En nivel 1, los enemigos no cambian de dirección
         return;
     }
+
+    randomizeDirection();
 }
 
-void Enemigo::tryJumpIfObstacleAhead()
+/*
+  IA de movimiento aleatorio (solo para nivel 2+)
+*/
+void Enemigo::randomizeDirection()
 {
-    if (!onGround) return;
+    if (numeroNivel == 1)
+        return;
 
-    if (detectarObstaculoAdelante()) {
-        vy = -10;
-        onGround = false;
-        qDebug() << "Enemigo saltando sobre obstáculo";
+    QRandomGenerator* rng = QRandomGenerator::global();
+
+    if (tipoMovimiento == TipoMovimiento::RECTILINEO) {
+        upPressed    = rng->bounded(4) == 0;
+        downPressed  = rng->bounded(4) == 0;
+        leftPressed  = rng->bounded(4) == 0;
+        rightPressed = rng->bounded(4) == 0;
+
+        if (upPressed && downPressed) {
+            if (rng->bounded(2)) upPressed = false;
+            else downPressed = false;
+        }
+
+        if (leftPressed && rightPressed) {
+            if (rng->bounded(2)) leftPressed = false;
+            else rightPressed = false;
+        }
+    } else {
+        leftPressed = false;
+        rightPressed = false;
     }
 }
 
+/*
+  Saltar si hay obstaculo adelante (solo nivel 2+)
+*/
+void Enemigo::tryJumpIfObstacleAhead()
+{
+    if (numeroNivel == 1) return;
+    if (!onGround) return;
+
+    if (detectarObstaculoAdelante())
+    {
+        vy = -10;
+        onGround = false;
+    }
+}
+
+/*
+  Deteccion de obstaculo justo adelante
+*/
 bool Enemigo::detectarObstaculoAdelante()
 {
     if (!scene()) return false;
 
     qreal distancia = rect().width() * 1.5;
-    qreal direccion = mirandoIzquierda ? -1 : 1;
+    qreal dir = mirandoIzquierda ? -1 : 1;
 
-    QRectF zona;
-    if (direccion > 0) {
-        zona = QRectF(
-            x() + rect().width(),
-            y(),
-            distancia,
-            rect().height()
-            );
-    } else {
-        zona = QRectF(
-            x() - distancia,
-            y(),
-            distancia,
-            rect().height()
-            );
-    }
+    QRectF zona = QRectF(
+                      x() + dir * rect().width(),
+                      y(),
+                      distancia * dir,
+                      rect().height()
+                      ).normalized();
 
-    QList<QGraphicsItem*> objs = scene()->items(zona, Qt::IntersectsItemShape);
+    QList<QGraphicsItem*> items = scene()->items(zona, Qt::IntersectsItemShape);
 
-    for (QGraphicsItem* item : objs) {
+    for (QGraphicsItem* item : items)
+    {
         if (item == this) continue;
-        Obstaculo* obs = dynamic_cast<Obstaculo*>(item);
-        if (obs) {
+        if (dynamic_cast<Obstaculo*>(item))
             return true;
-        }
     }
     return false;
 }
 
 void Enemigo::tryJump()
 {
-    if (onGround && QRandomGenerator::global()->bounded(100) < 2) {
+    if (numeroNivel == 1) return;
+
+    if (onGround && QRandomGenerator::global()->bounded(100) < 2)
+    {
         vy = -10;
         onGround = false;
     }
