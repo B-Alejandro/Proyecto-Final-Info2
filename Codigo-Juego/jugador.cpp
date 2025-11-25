@@ -3,6 +3,8 @@
 #include <QBrush>
 #include <QDebug>
 #include <QTimer>
+#include "proyectil.h"
+#include <QGraphicsScene>
 
 Jugador::Jugador(qreal w,
                  qreal h,
@@ -131,6 +133,27 @@ void Jugador::keyPressEvent(QKeyEvent* event)
         return;
     }
 
+    if (event->key() == Qt::Key_Space) {
+        if (!scene()) return;
+
+        qreal projW = 10;
+        qreal projH = 16;
+        qreal projSpeed = 10.0;
+        int dirY = -1; // hacia arriba
+
+        Proyectil* bala = new Proyectil(projW, projH, projSpeed, dirY);
+        bala->setOwner(this);
+
+        // spawn en la “parte superior” del jugador
+        QRectF br = boundingRect();           // local
+        QPointF spawn = scenePos()
+                        + QPointF(0, br.top() - projH/2.0);
+
+        bala->setPos(spawn);
+        scene()->addItem(bala);
+        return;
+    }
+
     if (tipoMovimiento == TipoMovimiento::RECTILINEO) {
         switch (event->key()) {
         case Qt::Key_Up:
@@ -215,3 +238,5 @@ void Jugador::keyReleaseEvent(QKeyEvent* event)
         }
     }
 }
+
+

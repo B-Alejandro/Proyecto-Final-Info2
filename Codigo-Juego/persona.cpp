@@ -2,6 +2,7 @@
 #include "fisica.h"
 #include <QPainter>
 #include <QDebug>
+#include <QGraphicsScene>
 
 /*
   Persona.cpp corregido
@@ -88,6 +89,7 @@ void Persona::recibirDanio(int cantidad)
     if (vidaActual <= 0) {
         setAnimacion(EstadoAnimacion::MUERTO);
         emit murioPersona();
+        emit died(this);  // Para compatibilidad con nivel 1
     }
 }
 

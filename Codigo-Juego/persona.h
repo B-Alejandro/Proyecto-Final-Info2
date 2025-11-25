@@ -79,10 +79,10 @@ public:
 signals:
     void vidaCambiada(int vidaActual, int vidaMaxima);
     void murioPersona();
+    void died(Persona* who);
 
 protected:
     // override para que Qt conozca el tamano real del item
-
     // renderizado sin escalado
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget) override;
 
@@ -122,9 +122,6 @@ protected:
 private slots:
     void actualizarAnimacion();
     void finalizarInvulnerabilidad();
-
-    // mantenemos el metodo por compatibilidad; no se llama por timer propio
-
 };
 
 #endif // PERSONA_H
