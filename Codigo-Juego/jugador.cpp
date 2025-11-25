@@ -3,6 +3,8 @@
 #include <QBrush>
 #include <QDebug>
 #include <QTimer>
+#include "proyectil.h"
+#include <QGraphicsScene>
 
 Jugador::Jugador(qreal w,
                  qreal h,
@@ -14,57 +16,62 @@ Jugador::Jugador(qreal w,
     setBrush(QBrush(Qt::green));
     setFlag(QGraphicsItem::ItemIsFocusable);
     setFocus();
-
-    // Cargar sprites por defecto
-    cargarSprites();
 }
 
-void Jugador::cargarSprites()
+void Jugador::cargarSpritesnivel2()
 {
     qDebug() << "=== CARGANDO SPRITES DEL JUGADOR ===";
 
-    // Rutas de los sprites
+    QString rutaIdle = ":/Recursos/Sprites/Idle_homeless.png";
     QString rutaRun = ":/Recursos/Sprites/Run_homeless.png";
     QString rutaJump = ":/Recursos/Sprites/Jump_homeless.png";
-    QString rutaDeath = ":/Recursos/Sprites/Dead.png";  // *** NUEVO ***
+    QString rutaDeath = ":/Recursos/Sprites/Dead.png";
 
+    spriteIdle = QPixmap(rutaIdle);
     spriteCorrer = QPixmap(rutaRun);
     spriteSaltar = QPixmap(rutaJump);
-    spriteMuerte = QPixmap(rutaDeath);  // *** NUEVO ***
+    spriteMuerte = QPixmap(rutaDeath);
 
-    // Verificación detallada
+    if (spriteIdle.isNull()) {
+        qDebug() << " ERROR: No se pudo cargar" << rutaIdle;
+        spriteIdle = spriteCorrer;  // Fallback
+    } else {
+        qDebug() << " Sprite IDLE cargado:" << spriteIdle.width() << "x" << spriteIdle.height();
+    }
+
     if (spriteCorrer.isNull()) {
-        qDebug() << "❌ ERROR: No se pudo cargar" << rutaRun;
+        qDebug() << " ERROR: No se pudo cargar" << rutaRun;
         qDebug() << "   Verifica que el archivo existe en el .qrc";
     } else {
-        qDebug() << "✓ Sprite correr cargado:" << spriteCorrer.width() << "x" << spriteCorrer.height();
+        qDebug() << " Sprite correr cargado:" << spriteCorrer.width() << "x" << spriteCorrer.height();
     }
 
     if (spriteSaltar.isNull()) {
-        qDebug() << "⚠ No se pudo cargar" << rutaJump << "- usando fallback";
+        qDebug() << " No se pudo cargar" << rutaJump << "- usando fallback";
         spriteSaltar = spriteCorrer;
     } else {
-        qDebug() << "✓ Sprite saltar cargado:" << spriteSaltar.width() << "x" << spriteSaltar.height();
+        qDebug() << " Sprite saltar cargado:" << spriteSaltar.width() << "x" << spriteSaltar.height();
     }
 
-    // *** NUEVO: Verificar sprite de muerte ***
     if (spriteMuerte.isNull()) {
-        qDebug() << "⚠ No se pudo cargar" << rutaDeath << "- usando fallback";
+        qDebug() << " No se pudo cargar" << rutaDeath << "- usando fallback";
         spriteMuerte = spriteCorrer;
     } else {
-        qDebug() << "✓ Sprite muerte cargado:" << spriteMuerte.width() << "x" << spriteMuerte.height();
+        qDebug() << " Sprite muerte cargado:" << spriteMuerte.width() << "x" << spriteMuerte.height();
     }
 
-    // Establecer sprite inicial (correr)
-    if (!spriteCorrer.isNull()) {
+    // Iniciar con sprite IDLE
+    if (!spriteIdle.isNull()) {
+        setSprite(rutaIdle, 128, 128, 8);
+        setAnimacion(EstadoAnimacion::IDLE);
+    } else if (!spriteCorrer.isNull()) {
         setSprite(rutaRun, 128, 128, 8);
-        setAnimacion(EstadoAnimacion::CORRIENDO);
+        setAnimacion(EstadoAnimacion::IDLE);
     }
 
     qDebug() << "=== FIN CARGA DE SPRITES ===\n";
 }
 
-// Este método se llama automáticamente cuando cambia el estado
 void Jugador::onEstadoAnimacionCambiado()
 {
     cambiarSpritePorEstado();
@@ -74,54 +81,76 @@ void Jugador::cambiarSpritePorEstado()
 {
     EstadoAnimacion estado = getEstadoAnimacion();
 
-    // *** MODIFICADO: Prioridad al estado MUERTO ***
     if (estado == EstadoAnimacion::MUERTO && !spriteMuerte.isNull()) {
-        // Cambiar a sprite de muerte
         if (spriteSheet.cacheKey() != spriteMuerte.cacheKey()) {
             spriteSheet = spriteMuerte;
             frameActual = 0;
-            totalFrames = 8;  // Ajusta según tu sprite de muerte
-            qDebug() << "→ Sprite MUERTE activado";
+            totalFrames = 8;
+            qDebug() << "Sprite MUERTE activado";
         }
     }
     else if (estado == EstadoAnimacion::SALTANDO && !spriteSaltar.isNull()) {
-        // Cambiar a sprite de salto
         if (spriteSheet.cacheKey() != spriteSaltar.cacheKey()) {
             spriteSheet = spriteSaltar;
             frameActual = 0;
-            qDebug() << "→ Sprite SALTAR activado";
+            totalFrames = 8;
+            qDebug() << "Sprite SALTAR activado";
         }
     }
     else if (estado == EstadoAnimacion::CORRIENDO && !spriteCorrer.isNull()) {
-        // Cambiar a sprite de correr
         if (spriteSheet.cacheKey() != spriteCorrer.cacheKey()) {
             spriteSheet = spriteCorrer;
             frameActual = 0;
-            qDebug() << "→ Sprite CORRER activado";
+            totalFrames = 8;
+            qDebug() << "Sprite CORRER activado";
+        }
+    }
+    else if (estado == EstadoAnimacion::IDLE && !spriteIdle.isNull()) {
+        if (spriteSheet.cacheKey() != spriteIdle.cacheKey()) {
+            spriteSheet = spriteIdle;
+            frameActual = 0;
+            totalFrames = 8;
+            qDebug() << "Sprite IDLE activado";
         }
     }
 }
 
-// *** NUEVO: Método para activar animación de muerte ***
 void Jugador::activarAnimacionMuerte()
 {
-    qDebug() << "🎬 Activando animación de muerte";
+    qDebug() << "Activando animacion de muerte";
 
-    // Cambiar al estado de muerte
     setAnimacion(EstadoAnimacion::MUERTO);
 
-    // Crear timer para reproducir la animación una sola vez
-    // Duración: 800ms = aproximadamente 8 frames a 10fps
     QTimer::singleShot(800, this, [this]() {
         pausarAnimacion();
-        qDebug() << "⏸️ Animación de muerte completada - todo pausado";
+        qDebug() << "Animacion de muerte completada - todo pausado";
     });
 }
 
 void Jugador::keyPressEvent(QKeyEvent* event)
 {
-    // *** NUEVO: No procesar teclas si está muerto ***
     if (estadoActual == EstadoAnimacion::MUERTO) {
+        return;
+    }
+
+    if (event->key() == Qt::Key_Space) {
+        if (!scene()) return;
+
+        qreal projW = 10;
+        qreal projH = 16;
+        qreal projSpeed = 10.0;
+        int dirY = -1; // hacia arriba
+
+        Proyectil* bala = new Proyectil(projW, projH, projSpeed, dirY);
+        bala->setOwner(this);
+
+        // spawn en la “parte superior” del jugador
+        QRectF br = boundingRect();           // local
+        QPointF spawn = scenePos()
+                        + QPointF(0, br.top() - projH/2.0);
+
+        bala->setPos(spawn);
+        scene()->addItem(bala);
         return;
     }
 
@@ -145,7 +174,8 @@ void Jugador::keyPressEvent(QKeyEvent* event)
             break;
         }
     } else {
-        // CON_GRAVEDAD: SOLO movimiento vertical (salto)
+        // CON_GRAVEDAD: Solo cambiar el estado de las teclas
+        // NO forzar animaciones aqui - persona.cpp lo maneja
         switch (event->key()) {
         case Qt::Key_Up:
         case Qt::Key_W:
@@ -153,20 +183,23 @@ void Jugador::keyPressEvent(QKeyEvent* event)
             if (onGround) {
                 vy = -10;
                 onGround = false;
-                qDebug() << "¡SALTO! Estado: SALTANDO";
-                // El cambio de animación se maneja automáticamente
-                // en updateMovementConGravedad() -> setAnimacion()
+                qDebug() << "SALTO!";
             }
             break;
-            // *** NO HAY MOVIMIENTO HORIZONTAL ***
-            // No procesamos teclas Left/Right/A/D
+        case Qt::Key_Left:
+        case Qt::Key_A:
+            leftPressed = true;
+            break;
+        case Qt::Key_Right:
+        case Qt::Key_D:
+            rightPressed = true;
+            break;
         }
     }
 }
 
 void Jugador::keyReleaseEvent(QKeyEvent* event)
 {
-    // *** NUEVO: No procesar teclas si está muerto ***
     if (estadoActual == EstadoAnimacion::MUERTO) {
         return;
     }
@@ -191,7 +224,19 @@ void Jugador::keyReleaseEvent(QKeyEvent* event)
             break;
         }
     } else {
-        // CON_GRAVEDAD: No hay teclas de movimiento horizontal que liberar
-        // Los cambios de animación se manejan automáticamente
+        // CON_GRAVEDAD: Solo cambiar el estado de las teclas
+        // NO forzar animaciones aqui - persona.cpp lo maneja
+        switch (event->key()) {
+        case Qt::Key_Left:
+        case Qt::Key_A:
+            leftPressed = false;
+            break;
+        case Qt::Key_Right:
+        case Qt::Key_D:
+            rightPressed = false;
+            break;
+        }
     }
 }
+
+

@@ -16,7 +16,8 @@ SOURCES += \
     nivel2.cpp \
     nivel3.cpp \
     nivelbase.cpp \
-    persona.cpp
+    persona.cpp \
+    proyectil.cpp
 
 HEADERS += \
     Obstaculo.h \
@@ -29,7 +30,8 @@ HEADERS += \
     nivel2.h \
     nivel3.h \
     nivelbase.h \
-    persona.h
+    persona.h \
+    proyectil.h
 
 FORMS +=
 

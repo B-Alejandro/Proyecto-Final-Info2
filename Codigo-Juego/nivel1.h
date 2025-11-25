@@ -4,6 +4,7 @@
 #define NIVEL1_H
 
 #include "nivelbase.h"
+#include "persona.h"
 
 class Nivel1 : public NivelBase
 {
@@ -18,6 +19,9 @@ protected:
     void crearObstaculos() override;
 
 private:
+
+    int vistaAncho;
+    int vistaAlto;
 
     QList<Enemigo*> listaEnemigos;          // enemigos vivos que gestionamos
     int spawnDelayMs = 2000;                 // tiempo entre spawns cuando uno muere
@@ -40,6 +44,12 @@ private:
     //FUNCION PRIMORDIAL, elimina los enemigos que llegan al final de la pantalla
     void cleanupOffscreen();
 
+    //REVISAR si el jugador y un enemigo colisionaron, para elminar dicho enemigo y aplicar la penalizacion de vida al jugador
+    void revisarColision();
+    void colisionDetectada(Enemigo* e);
+
+private slots:
+    void onEnemyDied(Persona* p);
 };
 
 #endif // NIVEL1_H
