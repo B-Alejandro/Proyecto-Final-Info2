@@ -75,6 +75,7 @@ void Nivel1::spawnearOleada()
 
             // guardamos referencias para control de la oleada
             listaEnemigos.append(e1);
+            connect(e1, &Persona::died, this, &Nivel1::onEnemyDied);
         }
     }
     else if(tipoOleada == 1){
@@ -92,6 +93,8 @@ void Nivel1::spawnearOleada()
 
             // guardamos referencias para control de la oleada
             listaEnemigos.append(e1);
+            // Conectar señal de muerte del enemigo hacia Nivel1
+            connect(e1, &Persona::died, this, &Nivel1::onEnemyDied);
         }
     }
     else if(tipoOleada == 2){
@@ -108,6 +111,8 @@ void Nivel1::spawnearOleada()
 
             // guardamos referencias para control de la oleada
             listaEnemigos.append(e1);
+            // Conectar señal de muerte del enemigo hacia Nivel1
+            connect(e1, &Persona::died, this, &Nivel1::onEnemyDied);
         }
     }
 }
@@ -213,4 +218,19 @@ void Nivel1::crearObstaculos()
     suelo->setBorderColor(Qt::black, 2);
     obstaculos.append(suelo);
     escena->addItem(suelo);
+}
+
+void Nivel1::onEnemyDied(Persona* p)
+{
+    Enemigo* e = dynamic_cast<Enemigo*>(p);
+    if (!e) return;  // No es enemigo, ignorar.
+
+    // 1. Eliminar de la lista
+    listaEnemigos.removeOne(e);
+
+
+    qDebug() << "Enemigo eliminado correctamente. Enemigos restantes:" << listaEnemigos.size();
+
+    // 2. Aquí NO llamas delete, ya se hace en takeDamage() con deleteLater()
+    //    Así que NO toques memoria, ya está hecho.
 }

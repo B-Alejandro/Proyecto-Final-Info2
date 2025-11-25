@@ -4,6 +4,7 @@
 #define NIVEL1_H
 
 #include "nivelbase.h"
+#include "persona.h"
 
 class Nivel1 : public NivelBase
 {
@@ -47,6 +48,8 @@ private:
     void revisarColision();
     void colisionDetectada(Enemigo* e);
 
+private slots:
+    void onEnemyDied(Persona* p);
 };
 
 #endif // NIVEL1_H

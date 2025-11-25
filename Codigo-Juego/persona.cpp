@@ -242,8 +242,8 @@ void Persona::takeDamage(int dmg)
     m_vida -= dmg;
 
     if (m_vida <= 0) {
-        emit died(this);
         if (scene()) scene()->removeItem(this);
+        emit died(this);
         deleteLater();
     }
 }
