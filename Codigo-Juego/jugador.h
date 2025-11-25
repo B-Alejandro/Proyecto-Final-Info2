@@ -12,22 +12,23 @@ class Jugador : public Persona
 public:
     Jugador(qreal w, qreal h, qreal sceneWidth, qreal sceneHeight, TipoMovimiento tipo);
 
-    void cargarSprites();
+    void cargarSpritesnivel2();
 
-    // *** NUEVO: Método para activar animación de muerte ***
+    // Metodo para activar animacion de muerte
     void activarAnimacionMuerte();
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
 
-    // Sobrescribir método para cambiar sprites automáticamente
+    // Sobrescribir metodo para cambiar sprites automaticamente
     void onEstadoAnimacionCambiado() override;
 
 private:
+    QPixmap spriteIdle;    // *** AGREGADO ***
     QPixmap spriteCorrer;
     QPixmap spriteSaltar;
-    QPixmap spriteMuerte;  // *** NUEVO ***
+    QPixmap spriteMuerte;
 
     void cambiarSpritePorEstado();
 };
