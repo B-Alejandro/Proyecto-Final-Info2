@@ -37,6 +37,7 @@ void Nivel1::configurarNivel()
     // Crear jugador con nuevo tamaño
     jugador = new Jugador(anchoJugador, altoJugador, sceneW, sceneH, TipoMovimiento::RECTILINEO);
     jugador->setPos(posJugadorX, posJugadorY);
+    jugador->setVida(3);
     escena->addItem(jugador);
 }
 
@@ -57,7 +58,7 @@ void Nivel1::spawnearOleada()
 
     // Determinar tipo de oleada aleatoriamente
     //int tipoOleada = QRandomGenerator::global()->bounded(4);  // 0, 1, 2, o 3 (nueva con tanques)
-    int tipoOleada = 3;
+    int tipoOleada = 0;
 
     if(tipoOleada == 0) {
         // Oleada horizontal de enemigos
@@ -312,4 +313,92 @@ void Nivel1::onTankDied(Persona* p)
     qDebug() << "Tanque murió. Vida era:" << t->getVida();
 
     listaTanques.removeOne(t);
+}
+
+void Nivel1::verificarEstadoJugador()
+{
+    if (!jugador) return;
+
+    // Si el jugador murió y no estamos en pausa, activar Game Over
+    if (!jugador->estaVivo() && !juegoEnPausa) {
+        qDebug() << "Jugador murió - Activando Game Over";
+        juegoEnPausa = true;
+
+        // Mostrar pantalla después de un breve delay
+        QTimer::singleShot(500, this, [this]() {
+            if (pantallaGameOver) {
+                pantallaGameOver->mostrar();
+            }
+        });
+    }
+}
+
+void Nivel1::onJugadorMurio()
+{
+    qDebug() << "Señal de muerte del jugador recibida";
+    juegoEnPausa = true;
+}
+
+void Nivel1::manejarTecla(Qt::Key key)
+{
+    if (!juegoEnPausa) return;
+
+    qDebug() << "Tecla presionada en Game Over:" << key;
+
+    if (key == Qt::Key_R) {
+        qDebug() << "Reiniciando nivel...";
+
+        // Ocultar pantalla de Game Over
+        if (pantallaGameOver) {
+            pantallaGameOver->ocultar();
+        }
+
+        juegoEnPausa = false;
+
+        // Limpiar enemigos y tanques
+        for (Enemigo* e : listaEnemigos) {
+            if (e && escena) {
+                escena->removeItem(e);
+                e->deleteLater();
+            }
+        }
+        listaEnemigos.clear();
+
+        for (Tanque* t : listaTanques) {
+            if (t && escena) {
+                escena->removeItem(t);
+                t->deleteLater();
+            }
+        }
+        listaTanques.clear();
+
+        // Recrear jugador
+        if (jugador && escena) {
+            escena->removeItem(jugador);
+            jugador->deleteLater();
+        }
+
+        qreal posJugadorX = vistaAncho * 0.4;
+        qreal alturaSuelo = sceneH * 0.4;
+        qreal anchoJugador = vistaAncho * 0.1;
+        qreal altoJugador = vistaAncho * 0.1;
+        qreal posJugadorY = alturaSuelo - altoJugador;
+
+        jugador = new Jugador(anchoJugador, altoJugador, sceneW, sceneH, TipoMovimiento::RECTILINEO);
+        jugador->setPos(posJugadorX, posJugadorY);
+        jugador->setVida(100);
+
+        connect(jugador, &Persona::murioPersona, this, &Nivel1::onJugadorMurio);
+
+        escena->addItem(jugador);
+        jugador->setFocus();
+
+        // Spawnear nueva oleada
+        spawnearOleada();
+
+        qDebug() << "Nivel reiniciado correctamente";
+    }
+    else if (key == Qt::Key_Escape) {
+        qDebug() << "Volver al menú...";
+    }
 }

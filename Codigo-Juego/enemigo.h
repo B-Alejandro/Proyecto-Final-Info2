@@ -73,6 +73,9 @@ private slots:
     */
     void changeDirection();
 
+    // *** NUEVO: Slot para intentar disparar ***
+    void intentarDisparar();
+
 private:
     void randomizeDirection();
     void tryJump();
@@ -100,6 +103,11 @@ private:
     QPixmap spriteCorrer;
     QPixmap spriteSaltar;
     QPixmap spriteMuerte;
+
+    // *** NUEVO: Sistema de disparo ***
+    QTimer* timerDisparo;
+    int tiempoEntreDisparos;
+    void dispararProyectil();
 };
 
 #endif // ENEMIGO_H

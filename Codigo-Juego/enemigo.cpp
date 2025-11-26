@@ -1,6 +1,7 @@
 #include "enemigo.h"
 #include "obstaculo.h"
 #include "jugador.h"
+#include "proyectil.h"
 #include <QBrush>
 #include <QRandomGenerator>
 #include <QGraphicsScene>
@@ -28,20 +29,30 @@ Enemigo::Enemigo(qreal w,
     changeDirectionTime = 2000;
     canJump = true;
 
+    // *** NUEVO: Configurar sistema de disparo ***
+    tiempoEntreDisparos = 2000; // Dispara cada 2 segundos
+    timerDisparo = new QTimer(this);
+    connect(timerDisparo, &QTimer::timeout, this, &Enemigo::intentarDisparar);
+
+    // Iniciar disparos después de medio segundo
+    QTimer::singleShot(500, this, [this]() {
+        if (estaVivo() && numeroNivel == 1) {
+            timerDisparo->start(tiempoEntreDisparos);
+        }
+    });
+
     aiTimer = new QTimer(this);
     connect(aiTimer, &QTimer::timeout, this, &Enemigo::changeDirection);
 
     if (numeroNivel == 1)
     {
-        // *** NIVEL 1: Configuración para movimiento descendente ***
         upPressed = false;
         leftPressed = false;
         rightPressed = false;
-        downPressed = true;  // Siempre moviéndose hacia abajo
-        speed = 5.0;  // Velocidad visible
+        downPressed = true;
+        speed = 5.0;
 
-        // *** CRÍTICO: Configurar vida baja para nivel 1 ***
-        setVida(3);  // Mueren con 1 hit
+        setVida(3);
 
         qDebug() << "Enemigo Nivel 1 creado en pos:" << x() << y()
                  << "con speed:" << speed
@@ -50,9 +61,8 @@ Enemigo::Enemigo(qreal w,
     }
     else
     {
-        // *** NIVEL 2+: Modo inactivo hasta activar persecución ***
         speed = 0;
-        setVida(500);  // Más vida para niveles avanzados
+        setVida(500);
         aiTimer->start(changeDirectionTime);
         qDebug() << "Enemigo creado en modo inactivo con vida:" << getVida();
     }
@@ -303,5 +313,47 @@ void Enemigo::tryJump()
     {
         vy = -10;
         onGround = false;
+    }
+}
+
+
+void Enemigo::intentarDisparar()
+{
+    if (!scene() || !estaVivo()) {
+        if (timerDisparo) {
+            timerDisparo->stop();
+        }
+        return;
+    }
+
+    // Solo disparar en nivel 1
+    if (numeroNivel == 1) {
+        dispararProyectil();
+    }
+}
+
+void Enemigo::dispararProyectil()
+{
+    if (!scene()) return;
+
+    qreal projW = 10;
+    qreal projH = 16;
+    qreal projSpeed = 8.0;
+    int dirY = 1; // *** HACIA ABAJO ***
+
+    Proyectil* bala = new Proyectil(projW, projH, projSpeed, dirY);
+    bala->setOwner(this);
+
+    // Spawn en la parte inferior del enemigo
+    QRectF br = boundingRect();
+    QPointF spawn = scenePos() + QPointF(br.width() / 2 - projW / 2, br.bottom());
+
+    bala->setPos(spawn);
+    scene()->addItem(bala);
+
+    // Debug cada cierto tiempo
+    static int disparoCounter = 0;
+    if (disparoCounter++ % 5 == 0) {
+        qDebug() << "Enemigo disparó en:" << spawn;
     }
 }
