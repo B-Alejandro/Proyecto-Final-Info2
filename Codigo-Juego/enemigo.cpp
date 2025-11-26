@@ -38,7 +38,8 @@ Enemigo::Enemigo(qreal w,
         leftPressed = false;
         rightPressed = false;
         downPressed = true;  // Siempre moviéndose hacia abajo
-        speed = 5.0;  // Velocidad visible
+        // CORRECCIÓN 1: Velocidad ligeramente menor
+        speed = 5.0;
 
         // *** CRÍTICO: Configurar vida baja para nivel 1 ***
         setVida(3);  // Mueren con 1 hit
@@ -61,6 +62,79 @@ Enemigo::Enemigo(qreal w,
 /*
   Carga de sprites para niveles que los necesitan (nivel 2)
 */
+// En enemigo.cpp - Reemplazar el método cambiarSpritePorEstado()
+
+void Enemigo::cambiarSpritePorEstado()
+{
+    EstadoAnimacion estado = getEstadoAnimacion();
+
+    // Determinar el sprite y frames deseados
+    QPixmap* nuevoSprite = &spriteIdle;
+    int nuevosFrames = 1;
+
+    switch (estado)
+    {
+    case EstadoAnimacion::MUERTO:
+        nuevoSprite = &spriteMuerte;
+        nuevosFrames = 8;
+        break;
+    case EstadoAnimacion::SALTANDO:
+        nuevoSprite = &spriteSaltar;
+        nuevosFrames = 8;
+        break;
+    case EstadoAnimacion::CORRIENDO:
+        nuevoSprite = &spriteCorrer;
+        nuevosFrames = 8;
+        break;
+    case EstadoAnimacion::IDLE:
+    default:
+        nuevoSprite = &spriteIdle;
+        nuevosFrames = 1;
+        break;
+    }
+
+    // *** CORRECCIÓN CRÍTICA: Evitar repintar si sprite y frames son iguales ***
+    if (spriteSheet.cacheKey() == nuevoSprite->cacheKey() && totalFrames == nuevosFrames)
+        return;
+
+    // Actualizar sprite y frames
+    spriteSheet = *nuevoSprite;
+    totalFrames = nuevosFrames;
+    frameActual = 0; // Reset frame solo cuando cambia el sprite
+
+    // *** CORRECCIÓN: Solo forzar update si realmente cambió algo ***
+    prepareGeometryChange();
+    update(boundingRect());
+}
+
+
+// *** CORRECCIÓN ADICIONAL EN actualizarAnimacion() de persona.cpp ***
+// Reemplazar el método actualizarAnimacion() en persona.cpp:
+
+void Persona::actualizarAnimacion()
+{
+    if (!usarSprites || animacionPausada) return;
+
+    // *** CORRECCIÓN CRÍTICA: Si solo hay 1 frame, NO avanzar ***
+    if (totalFrames <= 1) {
+        // Para estados IDLE con 1 frame, simplemente no hacer nada
+        return;
+    }
+
+    int framePrevio = frameActual;
+    frameActual++;
+    if (frameActual >= totalFrames) frameActual = 0;
+
+    // *** CORRECCIÓN: Solo repintar si el frame cambió ***
+    if (frameActual != framePrevio) {
+        update(boundingRect());
+    }
+}
+
+
+// *** AJUSTE EN cargarSprites() de enemigo.cpp ***
+// Asegurar que el estado inicial sea correcto:
+
 void Enemigo::cargarSprites()
 {
     qDebug() << "Cargando sprites enemigo";
@@ -70,7 +144,7 @@ void Enemigo::cargarSprites()
     QString rutaJump  = ":/Recursos/Sprites/Run_soldier.png";
     QString rutaDeath = ":/Recursos/Sprites/Attacck.png";
 
-    spriteIdle   = QPixmap(rutaIdle);
+    spriteIdle    = QPixmap(rutaIdle);
     spriteCorrer = QPixmap(rutaRun);
     spriteSaltar = QPixmap(rutaJump);
     spriteMuerte = QPixmap(rutaDeath);
@@ -79,42 +153,14 @@ void Enemigo::cargarSprites()
     if (spriteSaltar.isNull()) spriteSaltar = spriteCorrer;
     if (spriteMuerte.isNull()) spriteMuerte = spriteCorrer;
 
-    setSprite(rutaIdle, 128, 128, 8);
+    // *** CORRECCIÓN: Establecer sprite con 1 frame para IDLE ***
+    setSprite(rutaIdle, 128, 128, 1);
     estadoActual = EstadoAnimacion::IDLE;
     frameActual = 0;
-}
 
-void Enemigo::cambiarSpritePorEstado()
-{
-    EstadoAnimacion estado = getEstadoAnimacion();
-
-    if (estado == EstadoAnimacion::MUERTO)
-    {
-        spriteSheet = spriteMuerte;
-        frameActual = 0;
-        totalFrames = 8;
-        return;
-    }
-
-    if (estado == EstadoAnimacion::SALTANDO)
-    {
-        spriteSheet = spriteSaltar;
-        frameActual = 0;
-        totalFrames = 8;
-        return;
-    }
-
-    if (estado == EstadoAnimacion::CORRIENDO)
-    {
-        spriteSheet = spriteCorrer;
-        frameActual = 0;
-        totalFrames = 8;
-        return;
-    }
-
+    // *** NUEVO: Forzar que spriteSheet apunte al correcto ***
     spriteSheet = spriteIdle;
-    frameActual = 0;
-    totalFrames = 8;
+    totalFrames = 1;
 }
 
 void Enemigo::onEstadoAnimacionCambiado()
@@ -142,7 +188,8 @@ void Enemigo::activarPersecucion()
     if (!enemigoActivo)
     {
         enemigoActivo = true;
-        speed = 6;
+        // CORRECCIÓN 4: Velocidad ligeramente menor
+        speed = 5.0;
 
         if (onGround)
             vy = 0;

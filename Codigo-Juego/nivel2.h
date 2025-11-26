@@ -8,9 +8,11 @@
 #include <QGraphicsPixmapItem>
 
 /*
-  Clase Nivel2
-  - Implementa la logica del nivel 2
-  - Maneja fondo dinamico, enemigos, obstaculos y la pantalla de Game Over
+  Clase Nivel2 - CORREDOR INFINITO MEJORADO
+  - Sistema dual de fondos con parallax
+  - Sistema dual de suelos con reposicionamiento
+  - Generación procedural de obstáculos
+  - Limpieza automática de elementos fuera de vista
 */
 
 class Nivel2 : public NivelBase
@@ -25,7 +27,6 @@ public:
     void crearObstaculos() override;
     void actualizar() override;
 
-    // Manejo de teclas cuando se esta en estado Game Over (juego en pausa)
     void manejarTecla(Qt::Key key);
 
     bool estaEnGameOver() const { return juegoEnPausa; }
@@ -37,23 +38,44 @@ private slots:
     void onJuegoTerminado();
 
 private:
-    // Metodo para crear el fondo dinamico y actualizarlo
-    void crearFondoDinamico();
-    void actualizarFondo(qreal posicionCamara);
+    // *** SISTEMA DE CORREDOR INFINITO ***
 
+    // Generación y limpieza de obstáculos
+    void spawnearObstaculoAleatorio();
+    void limpiarObstaculosLejanos();
+    void reposicionarEscena();
+
+    // Sistema de fondo dual con parallax
+    void crearFondoDinamico();
+    void actualizarFondo(qreal posicionJugador);
+
+    // Sistema de suelo dual con reposicionamiento
+    void crearSueloDual();
+    void actualizarSuelo(qreal posicionJugador);
+
+    // *** VARIABLES DE CONTROL ***
+    qreal distanciaEntreObstaculos;
+    qreal ultimaPosicionSpawn;
+    int contadorObstaculos;
+
+    // *** ENTIDADES DEL NIVEL ***
     Enemigo* enemigoAtras;
-    Obstaculo* suelo;
+    Obstaculo* suelo;        // Suelo 1 (parte del sistema dual)
+    Obstaculo* suelo2;       // Suelo 2 (parte del sistema dual)
     GameOverScreen* pantallaGameOver;
     bool juegoEnPausa;
 
-    // Dimensiones de la vista
+    // *** DIMENSIONES ***
     int vistaAncho;
     int vistaAlto;
 
-    // Fondo dinamico
+    // *** SISTEMA DE FONDO PARALLAX DUAL ***
     QGraphicsPixmapItem* fondo1;
     QGraphicsPixmapItem* fondo2;
     qreal anchoFondo;
+
+    // *** SISTEMA DE SUELO DUAL ***
+    qreal anchoSuelo;
 };
 
 #endif // NIVEL2_H

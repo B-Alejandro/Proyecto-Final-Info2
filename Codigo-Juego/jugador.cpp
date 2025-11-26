@@ -5,6 +5,7 @@
 #include <QTimer>
 #include "proyectil.h"
 #include <QGraphicsScene>
+#include <QKeyEvent> // Asegurar inclusión para eventos de teclado
 
 Jugador::Jugador(qreal w,
                  qreal h,
@@ -62,7 +63,8 @@ void Jugador::cargarSpritesnivel2()
 
     // Iniciar con sprite IDLE
     if (!spriteIdle.isNull()) {
-        setSprite(rutaIdle, 128, 128, 8);
+        // CORRECCIÓN 1: Establecer a 1 frame para detener el repintado en reposo
+        setSprite(rutaIdle, 128, 128, 1);
         setAnimacion(EstadoAnimacion::IDLE);
     } else if (!spriteCorrer.isNull()) {
         setSprite(rutaRun, 128, 128, 8);
@@ -81,6 +83,7 @@ void Jugador::cambiarSpritePorEstado()
 {
     EstadoAnimacion estado = getEstadoAnimacion();
 
+    // Las animaciones de MUERTO, SALTAR y CORRER mantienen 8 frames.
     if (estado == EstadoAnimacion::MUERTO && !spriteMuerte.isNull()) {
         if (spriteSheet.cacheKey() != spriteMuerte.cacheKey()) {
             spriteSheet = spriteMuerte;
@@ -109,7 +112,8 @@ void Jugador::cambiarSpritePorEstado()
         if (spriteSheet.cacheKey() != spriteIdle.cacheKey()) {
             spriteSheet = spriteIdle;
             frameActual = 0;
-            totalFrames = 8;
+            // CORRECCIÓN 2: Establecer a 1 frame aquí también.
+            totalFrames = 1;
             qDebug() << "Sprite IDLE activado";
         }
     }
@@ -145,7 +149,7 @@ void Jugador::keyPressEvent(QKeyEvent* event)
         bala->setOwner(this);
 
         // spawn en la “parte superior” del jugador
-        QRectF br = boundingRect();           // local
+        QRectF br = boundingRect();             // local
         QPointF spawn = scenePos()
                         + QPointF(0, br.top() - projH/2.0);
 
@@ -238,5 +242,3 @@ void Jugador::keyReleaseEvent(QKeyEvent* event)
         }
     }
 }
-
-

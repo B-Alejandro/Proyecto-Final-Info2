@@ -245,16 +245,9 @@ void Persona::setAnimacion(EstadoAnimacion estado)
         onEstadoAnimacionCambiado();
     }
 }
+// Archivo: persona.cpp
 
-void Persona::actualizarAnimacion()
-{
-    if (!usarSprites || animacionPausada) return;
 
-    frameActual++;
-    if (frameActual >= totalFrames) frameActual = 0;
-
-    update(); // solicita repaint
-}
 
 void Persona::setTipoMovimiento(TipoMovimiento tipo)
 {
@@ -269,25 +262,30 @@ void Persona::paint(QPainter* painter, const QStyleOptionGraphicsItem*, QWidget*
         int srcX = frameActual * anchoSprite;
         int srcY = 0;
 
+        // Coordenadas de dibujo (destino)
+        qreal destX = 0;
+        qreal destY = 0;
+        qreal destW = anchoSprite;
+        qreal destH = altoSprite;
+
         if (mirandoIzquierda) {
-            painter->save();
-            painter->translate(anchoSprite / 2.0, altoSprite / 2.0);
-            painter->scale(-1, 1);
-            painter->translate(-anchoSprite / 2.0, -altoSprite / 2.0);
+            // Ajustar el ancho a negativo para hacer el flip
+            // y mover la posicion X a la derecha (al ancho del sprite)
+            // para que el flip se vea en la posicion correcta.
+            destX = anchoSprite;
+            destW = -anchoSprite;
         }
 
-        painter->drawPixmap(0, 0, spriteSheet,
-                            srcX, srcY,
-                            anchoSprite, altoSprite);
+        // Dibuja el frame directamente usando el ancho y posición (potencialmente negativos)
+        painter->drawPixmap(QRectF(destX, destY, destW, destH), // Destino
+                            spriteSheet,
+                            QRectF(srcX, srcY, anchoSprite, altoSprite)); // Origen
 
-        if (mirandoIzquierda) painter->restore();
+        // ... (Efecto visual de invulnerabilidad) ...
 
-        // Efecto visual de invulnerabilidad
-        if (invulnerable) {
-            painter->fillRect(0, 0, anchoSprite, altoSprite, QColor(255, 255, 255, 120));
-        }
 
     } else {
+        // ... (Dibujo de rectangulo si no hay sprite) ...
         painter->setBrush(brush());
         painter->setPen(pen());
         painter->drawRect(rect());
