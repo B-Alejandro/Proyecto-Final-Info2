@@ -1,10 +1,11 @@
-
-// ============ nivel1.h ============
+// ============ nivel1.h - MODIFICADO CON TANQUES ============
 #ifndef NIVEL1_H
 #define NIVEL1_H
 
 #include "nivelbase.h"
 #include "persona.h"
+
+class Tanque;  // Forward declaration
 
 class Nivel1 : public NivelBase
 {
@@ -23,33 +24,24 @@ private:
     int vistaAncho;
     int vistaAlto;
 
-    QList<Enemigo*> listaEnemigos;          // enemigos vivos que gestionamos
-    int spawnDelayMs = 2000;                 // tiempo entre spawns cuando uno muere
-    int spawnMargin = 120;                  // cuánto por encima del visible spawnear
+    QList<Enemigo*> listaEnemigos;          // Enemigos vivos
+    QList<Tanque*> listaTanques;            // *** NUEVO: Tanques vivos ***
+    int spawnDelayMs = 2000;
+    int spawnMargin = 120;
 
-    /*
-     * FUNCIONES PARA LA APARICION DE ENEMIGOS.
-     *
-     * -Estas funciones son unicas de este nivel debido a sus propiedades de vision
-     * y sus mecanicas
-     *
-     */
-
-    //Aparicion de enemigos desde la parte superior de la pantalla
+    // Funciones de oleadas
     void spawnearOleada();
-
-    //tick principal del nivel
     void gameTick();
-
-    //FUNCION PRIMORDIAL, elimina los enemigos que llegan al final de la pantalla
     void cleanupOffscreen();
 
-    //REVISAR si el jugador y un enemigo colisionaron, para elminar dicho enemigo y aplicar la penalizacion de vida al jugador
+    // Colisiones
     void revisarColision();
     void colisionDetectada(Enemigo* e);
+    void colisionTanqueDetectada(Tanque* t);  // *** NUEVA ***
 
 private slots:
     void onEnemyDied(Persona* p);
+    void onTankDied(Persona* p);  // *** NUEVO ***
 };
 
 #endif // NIVEL1_H
