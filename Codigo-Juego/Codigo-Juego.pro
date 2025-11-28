@@ -10,6 +10,7 @@ SOURCES += \
     explosion.cpp \
     fisica.cpp \
     gameoverscreen.cpp \
+    hudnivel1.cpp \
     juego.cpp \
     jugador.cpp \
     main.cpp \
@@ -20,7 +21,8 @@ SOURCES += \
     persona.cpp \
     proyectil.cpp \
     proyectiltanque.cpp \
-    tanque.cpp
+    tanque.cpp \
+    victoriascreen.cpp
 
 HEADERS += \
     Obstaculo.h \
@@ -28,6 +30,7 @@ HEADERS += \
     explosion.h \
     fisica.h \
     gameoverscreen.h \
+    hudnivel1.h \
     juego.h \
     jugador.h \
     nivel1.h \
@@ -37,7 +40,8 @@ HEADERS += \
     persona.h \
     proyectil.h \
     proyectiltanque.h \
-    tanque.h
+    tanque.h \
+    victoriascreen.h
 
 FORMS +=
 

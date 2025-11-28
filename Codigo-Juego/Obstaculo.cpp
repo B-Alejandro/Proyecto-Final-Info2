@@ -11,11 +11,17 @@ Obstaculo::Obstaculo(qreal x,
                      qreal y,
                      qreal w,
                      qreal h,
-                     QColor color)
+                     QColor color,
+                     bool esMovil)
     : QGraphicsRectItem(0, 0, w, h),
     currentColor(color),
     tieneTextura(false),
-    repetirTextura(true)
+    repetirTextura(true),
+    esMovil(esMovil),
+    vidaActual(2),
+    vidaMaxima(2),
+    velocidad(3.0),
+    danioAlJugador(20)
 {
     setPos(x, y);
     setBrush(QBrush(color));
@@ -26,7 +32,7 @@ void Obstaculo::setColor(const QColor& color)
 {
     currentColor = color;
     setBrush(QBrush(color));
-    tieneTextura = false; // Si cambia el color, desactivar textura
+    tieneTextura = false;
 }
 
 void Obstaculo::setBorderColor(const QColor& color, int width)
@@ -54,8 +60,6 @@ void Obstaculo::setTextura(const QPixmap& pixmap, bool repetir)
     texturaPixmap = pixmap;
     repetirTextura = repetir;
     tieneTextura = true;
-
-    // Forzar redibujado
     update();
 }
 
@@ -65,6 +69,31 @@ void Obstaculo::limpiarTextura()
     texturaPixmap = QPixmap();
     setBrush(QBrush(currentColor));
     update();
+}
+
+void Obstaculo::recibirDanio(int cantidad)
+{
+    if (!estaVivo()) return;
+
+    vidaActual -= cantidad;
+    if (vidaActual < 0) vidaActual = 0;
+
+    qDebug() << "Obstáculo recibió daño:" << cantidad << "Vida restante:" << vidaActual;
+
+    if (vidaActual <= 0) {
+        qDebug() << "Obstáculo destruido";
+        emit obstaculoMuerto(this);
+    }
+}
+
+void Obstaculo::actualizar(qreal sceneH)
+{
+    if (!esMovil) return;
+
+    // Mover hacia abajo
+    setY(y() + velocidad);
+
+    // Si sale de la pantalla, será eliminado por el nivel
 }
 
 void Obstaculo::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
@@ -78,16 +107,13 @@ void Obstaculo::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
         QRectF rect = this->rect();
 
         if (repetirTextura) {
-            // Crear un patrón repetido (tiling)
             QBrush texturaBrush(texturaPixmap);
             painter->setBrush(texturaBrush);
             painter->setPen(pen());
             painter->drawRect(rect);
         } else {
-            // Escalar la imagen para que cubra todo el rectángulo
             painter->drawPixmap(rect.toRect(), texturaPixmap);
 
-            // Dibujar el borde si existe
             if (pen().style() != Qt::NoPen) {
                 painter->setPen(pen());
                 painter->setBrush(Qt::NoBrush);
@@ -97,7 +123,6 @@ void Obstaculo::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
 
         painter->restore();
     } else {
-        // Dibujo normal si no hay textura
         QGraphicsRectItem::paint(painter, option, widget);
     }
 }

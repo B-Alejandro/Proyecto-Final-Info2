@@ -24,7 +24,7 @@ ProyectilTanque::ProyectilTanque(qreal width,
 {
     // Configurar movimiento parabólico
     // *** AUMENTADA: Velocidad horizontal para mayor alcance ***
-    velocidadX = desdeIzquierda ? 10.0 : -10.0;
+    velocidadX = desdeIzquierda ? 12.0 : -12.0;
 
     // *** AUMENTADA: Velocidad vertical inicial para arco más alto ***
     velocidadY = -8.0;
@@ -117,18 +117,20 @@ void ProyectilTanque::explotar()
         return;
     }
 
-    qDebug() << "Proyectil explotando en:" << scenePos();
+    qDebug() << "🔥 Proyectil explotando en:" << scenePos();
 
-    // Crear explosión en la posición actual
+    // *** AUMENTADO: Explosión más grande ***
     Explosion* explosion = new Explosion(
         scenePos().x(),
         scenePos().y(),
-        80,  // Radio de la explosión
-        30   // Daño de la explosión
+        150,  // Era 80, ahora 150 (radio casi el doble!)
+        3     // 3 vidas de daño
         );
 
     explosion->setOwner(m_owner);
     scene()->addItem(explosion);
+
+    qDebug() << "💥 Explosión creada con radio 150";
 
     // Eliminar el proyectil
     scene()->removeItem(this);

@@ -113,3 +113,30 @@ void Juego::actualizar()
         niveles[nivelActual]->actualizar();
     }
 }
+
+bool Juego::eventFilter(QObject* obj, QEvent* event)
+{
+    if (event->type() == QEvent::KeyPress) {
+        QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+
+        // Si estamos en Nivel1 y está en Game Over, manejar las teclas ahí
+        if (nivelActual == 0 && nivelActual < niveles.size()) {
+            Nivel1* nivel1 = dynamic_cast<Nivel1*>(niveles[nivelActual]);
+            if (nivel1 && nivel1->estaEnGameOver()) {
+                nivel1->manejarTecla(static_cast<Qt::Key>(keyEvent->key()));
+                return true;  // Evento manejado
+            }
+        }
+
+        // Si estamos en Nivel2 y está en Game Over
+        if (nivelActual == 1 && nivelActual < niveles.size()) {
+            Nivel2* nivel2 = dynamic_cast<Nivel2*>(niveles[nivelActual]);
+            if (nivel2 && nivel2->estaEnGameOver()) {
+                nivel2->manejarTecla(static_cast<Qt::Key>(keyEvent->key()));
+                return true;
+            }
+        }
+    }
+
+    return QObject::eventFilter(obj, event);
+}

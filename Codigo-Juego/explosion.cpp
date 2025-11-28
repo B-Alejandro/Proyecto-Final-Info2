@@ -97,7 +97,10 @@ void Explosion::aplicarDanio()
 {
     if (!scene()) return;
 
-    qDebug() << "Explosión aplicando daño. Radio:" << m_radioActual;
+    qDebug() << "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+    qDebug() << "💥 EXPLOSIÓN aplicando daño";
+    qDebug() << "   Centro:" << scenePos();
+    qDebug() << "   Radio:" << m_radioActual;
 
     // Obtener todos los items en el área
     QList<QGraphicsItem*> itemsEnArea = scene()->items(
@@ -108,12 +111,17 @@ void Explosion::aplicarDanio()
         Qt::IntersectsItemShape
         );
 
+    qDebug() << "   Items en área:" << itemsEnArea.size();
+
     int daniosAplicados = 0;
 
     for (QGraphicsItem* item : itemsEnArea) {
         Persona* p = dynamic_cast<Persona*>(item);
         if (!p) continue;
-        if (p == m_owner) continue;  // No dañar al tanque que disparó
+        if (p == m_owner) {
+            qDebug() << "   ⚠️ Ignorando owner (tanque)";
+            continue;
+        }
 
         // Calcular distancia al centro de la explosión
         QPointF centroPersona = p->scenePos() +
@@ -125,15 +133,25 @@ void Explosion::aplicarDanio()
         qreal dy = centroPersona.y() - centroExplosion.y();
         qreal distancia = std::sqrt(dx * dx + dy * dy);
 
+        qDebug() << "   🎯 Persona encontrada:";
+        qDebug() << "      Posición:" << p->scenePos();
+        qDebug() << "      Centro:" << centroPersona;
+        qDebug() << "      Distancia:" << distancia;
+        qDebug() << "      Radio límite:" << m_radioActual;
+
         // Solo dañar si está dentro del radio
         if (distancia <= m_radioActual) {
-            p->recibirDanio(m_danio);
+            int danioEnVidas = 3;
+            qDebug() << "      ✅ DENTRO DEL RADIO - Aplicando" << danioEnVidas << "vidas de daño";
+            p->recibirDanio(danioEnVidas);
             daniosAplicados++;
-            qDebug() << "Explosión dañó a entidad a distancia:" << distancia;
+        } else {
+            qDebug() << "      ❌ FUERA DEL RADIO - No daña";
         }
     }
 
-    qDebug() << "Explosión aplicó daño a" << daniosAplicados << "entidades";
+    qDebug() << "💥 Total dañados:" << daniosAplicados;
+    qDebug() << "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
 }
 
 void Explosion::autodestruir()

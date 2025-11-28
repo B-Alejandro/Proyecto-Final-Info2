@@ -4,9 +4,11 @@
 
 #include "nivelbase.h"
 #include "persona.h"
-#include "GameOverScreen.h"  // *** NUEVO: Incluir Game Over ***
+#include "GameOverScreen.h"
+#include "hudnivel1.h"
+#include "victoriascreen.h"
 
-class Tanque;  // Forward declaration
+class Tanque;
 
 class Nivel1 : public NivelBase
 {
@@ -15,14 +17,15 @@ class Nivel1 : public NivelBase
 public:
     Nivel1(Juego* juego, QObject* parent = 0);
 
-    // *** NUEVO: Manejo de teclas para Game Over ***
     void manejarTecla(Qt::Key key);
     bool estaEnGameOver() const { return juegoEnPausa; }
+    bool estaEnVictoria() const { return nivelGanado; }
 
 protected:
     void configurarNivel() override;
     void crearEnemigos() override;
     void crearObstaculos() override;
+    void actualizar() override;  // *** NUEVO: Override para actualizar HUD ***
 
 private:
 
@@ -31,12 +34,21 @@ private:
 
     QList<Enemigo*> listaEnemigos;
     QList<Tanque*> listaTanques;
+    QList<Obstaculo*> listaObstaculosMoviles;  // *** NUEVO ***
+
     int spawnDelayMs = 2000;
     int spawnMargin = 120;
 
-    // *** NUEVO: Sistema de Game Over ***
+    // Sistema de Game Over y Victoria
     GameOverScreen* pantallaGameOver;
+    VictoriaScreen* pantallaVictoria;  // *** NUEVO ***
+    HUDNivel1* hud;  // *** NUEVO: Interfaz visual ***
     bool juegoEnPausa;
+    bool nivelGanado;  // *** NUEVO ***
+
+    // *** NUEVO: Sistema de puntuación ***
+    int puntosActuales;
+    int puntosObjetivo;
 
     // Funciones de oleadas
     void spawnearOleada();
@@ -47,14 +59,21 @@ private:
     void revisarColision();
     void colisionDetectada(Enemigo* e);
     void colisionTanqueDetectada(Tanque* t);
+    void colisionObstaculoDetectada(Obstaculo* o);  // *** NUEVO ***
 
-    // *** NUEVO: Verificar estado del jugador ***
+    // Estado del jugador
     void verificarEstadoJugador();
+
+    // *** NUEVO: Sistema de puntos ***
+    void agregarPuntos(int cantidad);
+    void verificarVictoria();
 
 private slots:
     void onEnemyDied(Persona* p);
     void onTankDied(Persona* p);
-    void onJugadorMurio();  // *** NUEVO ***
+    void onJugadorMurio();
+    void onObstaculoDestruido(Obstaculo* obs);  // *** NUEVO ***
+    void onJugadorDaniado(int vidaActual, int vidaMax);  // *** NUEVO ***
 };
 
 #endif // NIVEL1_H
