@@ -110,27 +110,27 @@ void Enemigo::cambiarSpritePorEstado()
 
 // *** CORRECCIÓN ADICIONAL EN actualizarAnimacion() de persona.cpp ***
 // Reemplazar el método actualizarAnimacion() en persona.cpp:
-
 void Persona::actualizarAnimacion()
 {
     if (!usarSprites || animacionPausada) return;
 
     // *** CORRECCIÓN CRÍTICA: Si solo hay 1 frame, NO avanzar ***
     if (totalFrames <= 1) {
-        // Para estados IDLE con 1 frame, simplemente no hacer nada
+        // Para estados IDLE con 1 frame, no hacer nada
         return;
     }
 
     int framePrevio = frameActual;
     frameActual++;
-    if (frameActual >= totalFrames) frameActual = 0;
+    if (frameActual >= totalFrames) {
+        frameActual = 0;
+    }
 
     // *** CORRECCIÓN: Solo repintar si el frame cambió ***
     if (frameActual != framePrevio) {
         update(boundingRect());
     }
 }
-
 
 // *** AJUSTE EN cargarSprites() de enemigo.cpp ***
 // Asegurar que el estado inicial sea correcto:
@@ -189,7 +189,7 @@ void Enemigo::activarPersecucion()
     {
         enemigoActivo = true;
         // CORRECCIÓN 4: Velocidad ligeramente menor
-        speed = 5.0;
+        speed = 4.46;
 
         if (onGround)
             vy = 0;

@@ -76,26 +76,14 @@ QRectF Persona::boundingRect() const
 }
 
 /* recibir danio: aplica invulnerabilidad corta */
+// persona.cpp
+
 void Persona::recibirDanio(int cantidad)
 {
-    if (!estaVivo()) return;
-
-    // si ya esta invulnerable, ignorar
-    if (invulnerable) return;
-
-    vidaActual -= cantidad;
-    if (vidaActual < 0) vidaActual = 0;
-
-    qDebug() << "Persona recibió daño:" << cantidad << "Vida restante:" << vidaActual;
-
-    emit vidaCambiada(vidaActual, vidaMaxima);
-
-    // invulnerabilidad corta para evitar daños frames contiguos
-    invulnerable = true;
-    timerInvulnerabilidad->start(200);
+    // ... (código anterior)
 
     if (vidaActual <= 0) {
-        qDebug() << "Persona murió, eliminando de escena";
+        qDebug() << "Persona murió, activando secuencia de Game Over";
         setAnimacion(EstadoAnimacion::MUERTO);
 
         // *** DETENER MOVIMIENTO AL MORIR ***
@@ -103,13 +91,16 @@ void Persona::recibirDanio(int cantidad)
         if (timerAnimacion) timerAnimacion->stop();
 
         emit murioPersona();
-        emit died(this);  // Para compatibilidad con nivel 1
+        emit died(this);
 
-        // *** ELIMINAR DE LA ESCENA INMEDIATAMENTE ***
+        // ❌ COMENTAR/ELIMINAR ESTAS LÍNEAS.
+        //    Dejar que Nivel2 complete la secuencia de 'Game Over' (QTimer::singleShot).
+        /*
         if (scene()) {
             scene()->removeItem(this);
         }
         deleteLater();
+        */
     }
 }
 

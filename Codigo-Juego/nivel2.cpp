@@ -1,4 +1,4 @@
-// nivel2.cpp - VERSION CORREDOR INFINITO CON FONDO Y SUELO MEJORADOS
+// nivel2.cpp - VERSION CORREDOR INFINITO CON SISTEMA TRIPLE
 
 #include "nivel2.h"
 #include "juego.h"
@@ -8,6 +8,11 @@
 #include "persona.h"
 #include "fisica.h"
 #include "GameOverScreen.h"
+#include <QWidget>
+#include <QLabel>
+#include <QVBoxLayout>
+#include <QFontDatabase>
+#include <QGraphicsDropShadowEffect>
 
 #include <QGraphicsView>
 #include <QBrush>
@@ -25,12 +30,14 @@
 Nivel2::Nivel2(Juego* juego, QObject* parent)
     : NivelBase(juego, 2, parent),
     enemigoAtras(nullptr),
-    suelo(nullptr),
+    suelo1(nullptr),
     suelo2(nullptr),
+    suelo3(nullptr),
     pantallaGameOver(nullptr),
     juegoEnPausa(false),
     fondo1(nullptr),
     fondo2(nullptr),
+    fondo3(nullptr),
     anchoFondo(0),
     anchoSuelo(0),
     vistaAncho(0),
@@ -45,7 +52,7 @@ Nivel2::Nivel2(Juego* juego, QObject* parent)
     }
 
     // Escena pequeña y reposicionable
-    int anchoEscena = vistaAncho * 3;
+    int anchoEscena = vistaAncho * 4;
     int altoEscena = vistaAlto;
 
     crearEscena(anchoEscena, altoEscena);
@@ -62,25 +69,24 @@ Nivel2::~Nivel2()
 }
 
 // ====================================================================
-// GESTIÓN DE FONDO PARALLAX - SISTEMA DE DOS FONDOS
+// GESTIÓN DE FONDO PARALLAX - SISTEMA TRIPLE
 // ====================================================================
-
 void Nivel2::crearFondoDinamico()
 {
     QPixmap fondoPixmap(":/Recursos/Backgrounds/unnamed (1).jpg");
 
     if (fondoPixmap.isNull()) {
         qDebug() << "No se pudo cargar la imagen del fondo, creando fondo de respaldo";
-        fondoPixmap = QPixmap(vistaAncho * 3, sceneH);
+        fondoPixmap = QPixmap(vistaAncho * 2, sceneH);
         fondoPixmap.fill(QColor(135, 206, 235));
     } else {
-        // Escalar el fondo a la altura de la escena
         fondoPixmap = fondoPixmap.scaledToHeight(sceneH, Qt::SmoothTransformation);
 
-        // *** ANCHO DEL FONDO: 3 vistas para cubrir mejor ***
-        int anchoDeseado = vistaAncho * 3;
+        // *** AUMENTAR ANCHO DEL FONDO PARA MAYOR COBERTURA ***
+        // Usar 2.5 vistas en lugar de 2 para mejor overlap
+        int anchoDeseado = static_cast<int>(vistaAncho * 2.5);
+
         if (fondoPixmap.width() < anchoDeseado) {
-            // Repetir horizontalmente
             QPixmap fondoExtendido(anchoDeseado, fondoPixmap.height());
             QPainter painter(&fondoExtendido);
             int veces = (anchoDeseado / fondoPixmap.width()) + 1;
@@ -94,161 +100,210 @@ void Nivel2::crearFondoDinamico()
 
     anchoFondo = fondoPixmap.width();
 
+    // Limpiar fondos previos
     if (fondo1) {
         escena->removeItem(fondo1);
         delete fondo1;
-        fondo1 = nullptr;
     }
     if (fondo2) {
         escena->removeItem(fondo2);
         delete fondo2;
-        fondo2 = nullptr;
+    }
+    if (fondo3) {
+        escena->removeItem(fondo3);
+        delete fondo3;
     }
 
+    // Crear tres fondos
     fondo1 = new QGraphicsPixmapItem(fondoPixmap);
     fondo2 = new QGraphicsPixmapItem(fondoPixmap);
+    fondo3 = new QGraphicsPixmapItem(fondoPixmap);
 
-    // Posicionar fondos: uno en el centro, otro adelante
+    // Posicionar en cascada perfecta
     fondo1->setPos(0, 0);
     fondo2->setPos(anchoFondo, 0);
+    fondo3->setPos(anchoFondo * 2, 0);
 
     fondo1->setZValue(-1000);
     fondo2->setZValue(-1000);
+    fondo3->setZValue(-1000);
 
     if (escena) {
         escena->addItem(fondo1);
         escena->addItem(fondo2);
+        escena->addItem(fondo3);
     }
 
-    qDebug() << "Sistema de fondo dual creado. Ancho de cada fondo:" << anchoFondo;
+    qDebug() << "Sistema de fondo TRIPLE creado. Ancho de cada fondo:" << anchoFondo;
 }
 
+// --- ARCHIVO nivel2.cpp (FUNCIÓN CORREGIDA) ---
+// --- nivel2.cpp (FUNCIÓN actualizarFondo CORREGIDA) ---
+// --- nivel2.cpp (FUNCIÓN actualizarFondo CORREGIDA) ---
 void Nivel2::actualizarFondo(qreal posicionJugador)
 {
-    if (!fondo1 || !fondo2 || anchoFondo <= 0) return;
+    if (!fondo1 || !fondo2 || !fondo3 || anchoFondo <= 0) return;
 
-    // Factor parallax: el fondo se mueve más lento (30% de la velocidad del jugador)
-    qreal factorParallax = 0.3;
-    qreal posicionFondo = posicionJugador * factorParallax;
+    qreal factorParallax = 0.3; // 30% de velocidad (el fondo se mueve más lento)
+    qreal posicionCamara = jugador->x();
 
-    // *** SISTEMA MEJORADO: Asegurar cobertura completa ***
-    qreal inicioCamara = posicionJugador - (vistaAncho * 0.6);
-    qreal finCamara = posicionJugador + (vistaAncho * 0.6);
+    // 1. Calcular el desplazamiento parallax basado en la posición de la cámara
+    qreal desplazamientoCamara = posicionCamara - vistaAncho * 0.5;
+    qreal desplazamientoParallax = desplazamientoCamara * (1.0 - factorParallax);
 
-    // Calcular base con módulo para movimiento suave
-    qreal offset = std::fmod(posicionFondo, anchoFondo);
-    if (offset < 0) offset += anchoFondo;
+    // 2. Aplicar el desplazamiento parallax a cada fondo
+    //    IMPORTANTE: Usamos una posición base virtual para cada fondo
+    fondo1->setX(0 - desplazamientoParallax);
+    fondo2->setX(anchoFondo - desplazamientoParallax);
+    fondo3->setX(anchoFondo * 2 - desplazamientoParallax);
 
-    qreal baseX = posicionFondo - offset;
+    // 3. Sistema de bucle infinito con reposicionamiento suave
+    //    La clave es mantener siempre 3 fondos en cascada perfecta
 
-    // Posicionar fondos
-    fondo1->setX(baseX);
-    fondo2->setX(baseX + anchoFondo);
+    qreal limiteIzquierdo = posicionCamara - vistaAncho * 1.5;
 
-    // Verificar cobertura y reposicionar si es necesario
-    if (fondo2->x() + anchoFondo < finCamara) {
-        fondo1->setX(fondo2->x() + anchoFondo);
+    // Obtener las posiciones actuales
+    qreal pos1 = fondo1->x();
+    qreal pos2 = fondo2->x();
+    qreal pos3 = fondo3->x();
+
+    // Determinar cuál es el fondo más a la derecha (sin usar qMax encadenado)
+    qreal maxPosActual = pos1;
+    if (pos2 > maxPosActual) maxPosActual = pos2;
+    if (pos3 > maxPosActual) maxPosActual = pos3;
+
+    // Reposicionar cada fondo que sale del límite izquierdo
+    // La nueva posición siempre es: (posición máxima actual + anchoFondo)
+    // Esto garantiza continuidad perfecta
+
+    if (pos1 + anchoFondo < limiteIzquierdo) {
+        qreal nuevaPos = maxPosActual + anchoFondo;
+        fondo1->setX(nuevaPos);
+
+        // Recalcular máximo después de mover fondo1
+        maxPosActual = nuevaPos;
+        if (pos2 > maxPosActual) maxPosActual = pos2;
+        if (pos3 > maxPosActual) maxPosActual = pos3;
     }
-    if (fondo1->x() + anchoFondo < finCamara) {
-        fondo2->setX(fondo1->x() + anchoFondo);
+
+    if (pos2 + anchoFondo < limiteIzquierdo) {
+        qreal nuevaPos = maxPosActual + anchoFondo;
+        fondo2->setX(nuevaPos);
+
+        // Recalcular máximo después de mover fondo2
+        maxPosActual = nuevaPos;
+        if (pos1 > maxPosActual) maxPosActual = pos1;
+        if (pos3 > maxPosActual) maxPosActual = pos3;
     }
 
-    // Asegurar que haya fondo atrás también
-    if (fondo1->x() > inicioCamara && fondo2->x() > inicioCamara) {
-        if (fondo1->x() < fondo2->x()) {
-            fondo1->setX(fondo2->x() - anchoFondo);
-        } else {
-            fondo2->setX(fondo1->x() - anchoFondo);
-        }
+    if (pos3 + anchoFondo < limiteIzquierdo) {
+        qreal nuevaPos = maxPosActual + anchoFondo;
+        fondo3->setX(nuevaPos);
     }
 }
 
 // ====================================================================
-// GESTIÓN DE SUELO - SISTEMA DE DOS SUELOS
+// GESTIÓN DE SUELO - SISTEMA TRIPLE
 // ====================================================================
 
-void Nivel2::crearSueloDual()
+void Nivel2::crearSueloTriple()
 {
     qreal posYSuelo = sceneH * 0.85;
     qreal alturaSuelo = sceneH * 0.15;
 
-    // *** ANCHO DEL SUELO: 3 vistas para cubrir bien y evitar huecos ***
-    anchoSuelo = vistaAncho * 3;
+    // *** AUMENTAR ANCHO DEL SUELO PARA MAYOR COBERTURA ***
+    anchoSuelo = static_cast<int>(vistaAncho * 2.5);
 
-    // Limpiar suelos previos si existen
-    if (suelo) {
-        escena->removeItem(suelo);
-        delete suelo;
-        suelo = nullptr;
+    // Limpiar suelos previos
+    if (suelo1) {
+        escena->removeItem(suelo1);
+        delete suelo1;
     }
     if (suelo2) {
         escena->removeItem(suelo2);
         delete suelo2;
-        suelo2 = nullptr;
+    }
+    if (suelo3) {
+        escena->removeItem(suelo3);
+        delete suelo3;
     }
 
-    // Crear dos suelos en secuencia
-    suelo = new Obstaculo(0, posYSuelo, anchoSuelo, alturaSuelo, Qt::darkGreen);
-    suelo->setTextura(":/Recursos/Backgrounds/tierra.jpg", true);
-    suelo->setZValue(-10);
+    // Crear tres suelos
+    suelo1 = new Obstaculo(0, posYSuelo, anchoSuelo, alturaSuelo, Qt::darkGreen);
+    suelo1->setTextura(":/Recursos/Backgrounds/tierra.jpg", true);
+    suelo1->setZValue(-10);
 
     suelo2 = new Obstaculo(anchoSuelo, posYSuelo, anchoSuelo, alturaSuelo, Qt::darkGreen);
     suelo2->setTextura(":/Recursos/Backgrounds/tierra.jpg", true);
     suelo2->setZValue(-10);
 
+    suelo3 = new Obstaculo(anchoSuelo * 2, posYSuelo, anchoSuelo, alturaSuelo, Qt::darkGreen);
+    suelo3->setTextura(":/Recursos/Backgrounds/tierra.jpg", true);
+    suelo3->setZValue(-10);
+
     if (escena) {
-        escena->addItem(suelo);
+        escena->addItem(suelo1);
         escena->addItem(suelo2);
+        escena->addItem(suelo3);
     }
 
-    // Agregar a la lista de obstáculos para colisiones
-    obstaculos.append(suelo);
+    obstaculos.append(suelo1);
     obstaculos.append(suelo2);
+    obstaculos.append(suelo3);
 
-    qDebug() << "Sistema de suelo dual creado. Ancho de cada suelo:" << anchoSuelo;
+    qDebug() << "Sistema de suelo TRIPLE creado. Ancho de cada suelo:" << anchoSuelo;
 }
-
+// --- ARCHIVO nivel2.cpp (FUNCIÓN CORREGIDA) ---
+// --- ARCHIVO nivel2.cpp (FUNCIÓN CORREGIDA) ---
 void Nivel2::actualizarSuelo(qreal posicionJugador)
 {
-    if (!suelo || !suelo2 || anchoSuelo <= 0) return;
+    if (!suelo1 || !suelo2 || !suelo3 || anchoSuelo <= 0) return;
 
-    // *** SISTEMA MEJORADO: Mantener siempre suelo adelante y atrás ***
-    // Calcular dónde deberían estar los suelos basándose en la cámara
-    qreal inicioCamara = posicionJugador - (vistaAncho * 0.6);
+    qreal posicionCamara = posicionJugador;
 
-    // Usar módulo para crear bucle continuo
-    qreal offset = std::fmod(inicioCamara, anchoSuelo);
-    if (offset < 0) offset += anchoSuelo;
+    // 1. El suelo se mueve 1:1 con la cámara (sin parallax)
+    qreal desplazamientoCamara = posicionCamara - vistaAncho * 0.5;
 
-    // Base alineada con la cámara
-    qreal baseX = inicioCamara - offset;
+    // 2. Aplicar desplazamiento a cada suelo
+    suelo1->setX(0 - desplazamientoCamara);
+    suelo2->setX(anchoSuelo - desplazamientoCamara);
+    suelo3->setX(anchoSuelo * 2 - desplazamientoCamara);
 
-    // Posicionar suelos en cascada
-    suelo->setX(baseX);
-    suelo2->setX(baseX + anchoSuelo);
+    // 3. Sistema de bucle infinito (mismo principio que el fondo)
+    qreal limiteIzquierdo = posicionCamara - vistaAncho * 1.5;
 
-    // *** SISTEMA DE TRIPLE VERIFICACIÓN ***
-    // Asegurar que siempre haya suelo adelante
-    qreal finCamara = posicionJugador + (vistaAncho * 0.6);
+    // Obtener posiciones actuales
+    qreal pos1 = suelo1->x();
+    qreal pos2 = suelo2->x();
+    qreal pos3 = suelo3->x();
 
-    // Si suelo2 no llega al final de la cámara, mover suelo1 adelante
-    if (suelo2->x() + anchoSuelo < finCamara) {
-        suelo->setX(suelo2->x() + anchoSuelo);
+    // Determinar posición máxima
+    qreal maxPosActual = pos1;
+    if (pos2 > maxPosActual) maxPosActual = pos2;
+    if (pos3 > maxPosActual) maxPosActual = pos3;
+
+    // Reposicionar suelos que salieron del límite
+    if (pos1 + anchoSuelo < limiteIzquierdo) {
+        qreal nuevaPos = maxPosActual + anchoSuelo;
+        suelo1->setX(nuevaPos);
+
+        maxPosActual = nuevaPos;
+        if (pos2 > maxPosActual) maxPosActual = pos2;
+        if (pos3 > maxPosActual) maxPosActual = pos3;
     }
 
-    // Si suelo1 no llega al final de la cámara, mover suelo2 adelante
-    if (suelo->x() + anchoSuelo < finCamara) {
-        suelo2->setX(suelo->x() + anchoSuelo);
+    if (pos2 + anchoSuelo < limiteIzquierdo) {
+        qreal nuevaPos = maxPosActual + anchoSuelo;
+        suelo2->setX(nuevaPos);
+
+        maxPosActual = nuevaPos;
+        if (pos1 > maxPosActual) maxPosActual = pos1;
+        if (pos3 > maxPosActual) maxPosActual = pos3;
     }
 
-    // Verificación final: asegurar cobertura completa
-    if (suelo->x() > inicioCamara && suelo2->x() > inicioCamara) {
-        // Ambos están adelante, mover el de más atrás
-        if (suelo->x() < suelo2->x()) {
-            suelo->setX(suelo2->x() - anchoSuelo);
-        } else {
-            suelo2->setX(suelo->x() - anchoSuelo);
-        }
+    if (pos3 + anchoSuelo < limiteIzquierdo) {
+        qreal nuevaPos = maxPosActual + anchoSuelo;
+        suelo3->setX(nuevaPos);
     }
 }
 
@@ -256,11 +311,20 @@ void Nivel2::actualizarSuelo(qreal posicionJugador)
 // CONFIGURACIÓN INICIAL
 // ====================================================================
 
+// ====================================================================
+// 2. REEMPLAZAR configurarNivel() - Inicializar timer de daño
+// ====================================================================
+
 void Nivel2::configurarNivel()
 {
-    // Crear sistemas de fondo y suelo
+    // Inicializar timer de daño
+    if (!danoObstaculoTimer.isValid()) {
+        danoObstaculoTimer.start();
+    }
+
+    // Crear sistemas de fondo y suelo TRIPLE
     crearFondoDinamico();
-    crearSueloDual();
+    crearSueloTriple();
 
     qreal alturaSuelo = sceneH * 0.85;
 
@@ -271,9 +335,7 @@ void Nivel2::configurarNivel()
     jugador = new Jugador(anchoJugador, altoJugador, sceneW, sceneH, TipoMovimiento::CON_GRAVEDAD);
     jugador->setVida(100);
     jugador->setZValue(100);
-
-    // *** AUMENTAR VELOCIDAD DEL JUGADOR ***
-    jugador->setSpeed(5.5);  // Velocidad aumentada de 5.0 a 7.5
+    jugador->setSpeed(4.5);
 
     if (escena) escena->addItem(jugador);
 
@@ -307,8 +369,84 @@ void Nivel2::configurarNivel()
         jugador->setFocus();
 
         vista->centerOn(jugador);
-    }
+        // Crear HUD (vida, tiempo, score)
+        // Documentacion basica:
+        // Se crea un QWidget sobre el QGraphicsView para mostrar informacion.
+        // Se usan QLabel para mostrar texto de manera sencilla.
+
+        // HUD estilo arcade
+        // Documentacion basica:
+        // Se crea un widget con fondo transparente y labels con estilo tipo arcade.
+
+        if (escena && !escena->views().isEmpty()) {
+
+            QGraphicsView* vista = escena->views().first();
+
+            // cargar fuente arcade
+            QFontDatabase::addApplicationFont(":/Recursos/Fuentes/arcade.ttf");
+            QFont fuenteArcade("arcade", 18);
+
+            hudWidget = new QWidget(vista);
+            hudWidget->setGeometry(20, 20, 260, 120);
+
+            // Estilo del panel arcade
+            hudWidget->setStyleSheet(
+                "background-color: rgba(0, 0, 0, 180);"
+                "border: 3px solid rgb(0, 180, 255);"
+                "border-radius: 10px;"
+                );
+
+            QVBoxLayout* layout = new QVBoxLayout(hudWidget);
+
+            // Labels
+            vidaLabel = new QLabel("Vida: 100", hudWidget);
+            tiempoLabel = new QLabel("Tiempo: 0", hudWidget);
+            scoreLabel = new QLabel("Score: 0", hudWidget);
+
+            // Estilos arcade
+            vidaLabel->setFont(fuenteArcade);
+            tiempoLabel->setFont(fuenteArcade);
+            scoreLabel->setFont(fuenteArcade);
+
+            vidaLabel->setStyleSheet("color: rgb(0,255,255);");
+            tiempoLabel->setStyleSheet("color: rgb(0,255,100);");
+            scoreLabel->setStyleSheet("color: rgb(255,255,0);");
+
+            // Efecto glow para cada label
+            QGraphicsDropShadowEffect* glowVida = new QGraphicsDropShadowEffect();
+            glowVida->setBlurRadius(25);
+            glowVida->setColor(QColor(0,255,255));
+            glowVida->setOffset(0,0);
+
+            QGraphicsDropShadowEffect* glowTiempo = new QGraphicsDropShadowEffect();
+            glowTiempo->setBlurRadius(25);
+            glowTiempo->setColor(QColor(0,255,100));
+            glowTiempo->setOffset(0,0);
+
+            QGraphicsDropShadowEffect* glowScore = new QGraphicsDropShadowEffect();
+            glowScore->setBlurRadius(25);
+            glowScore->setColor(QColor(255,255,0));
+            glowScore->setOffset(0,0);
+
+            vidaLabel->setGraphicsEffect(glowVida);
+            tiempoLabel->setGraphicsEffect(glowTiempo);
+            scoreLabel->setGraphicsEffect(glowScore);
+
+            layout->addWidget(vidaLabel);
+            layout->addWidget(tiempoLabel);
+            layout->addWidget(scoreLabel);
+
+            hudWidget->setLayout(layout);
+            hudWidget->show();
+
+            tiempoJugado.start();
+        }
+
+        }
+
 }
+
+
 
 void Nivel2::crearEnemigos()
 {
@@ -337,11 +475,10 @@ void Nivel2::crearEnemigos()
     enemigoAtras->setZValue(100);
     enemigoAtras->setDireccionIzquierda(false);
 
-    // *** ENEMIGO INICIA INACTIVO (velocidad 0) ***
     enemigoAtras->setSpeed(0);
     enemigoAtras->vy = 0.0;
     enemigoAtras->onGround = true;
-    enemigoAtras->g = 0.4;
+    enemigoAtras->g = 0.5;
 
     enemigoAtras->leftPressed = false;
     enemigoAtras->rightPressed = false;
@@ -366,7 +503,7 @@ void Nivel2::crearObstaculos()
 {
     qDebug() << "=== INICIALIZANDO SISTEMA DE CORREDOR INFINITO ===";
 
-    // El suelo ya fue creado en crearSueloDual()
+    // El suelo ya fue creado en crearSueloTriple()
 
     // Inicializar spawning
     ultimaPosicionSpawn = (jugador ? jugador->x() : 0) + vistaAncho * 0.3;
@@ -379,75 +516,140 @@ void Nivel2::crearObstaculos()
 
     qDebug() << "Sistema infinito inicializado con" << obstaculosIniciales << "obstáculos";
 }
-
 void Nivel2::spawnearObstaculoAleatorio()
 {
     qreal posYSuelo = sceneH * 0.85;
     qreal alturaJugador = sceneH * 0.15;
 
-    // Variación aleatoria en distancia (más espaciado)
+    // Variación aleatoria en distancia
     qreal distanciaVariable = QRandomGenerator::global()->bounded(300, 600);
-
     qreal nuevaPosX = ultimaPosicionSpawn + distanciaVariable;
 
-    // Generación aleatoria de tipo de obstáculo
+    // Generación aleatoria de tipo de obstáculo (0-99)
     int tipoObstaculo = QRandomGenerator::global()->bounded(0, 100);
 
-    int altoObs, anchoObs;
-
-    if (tipoObstaculo < 50) {
-        // 50% - Obstáculo MUY BAJO (fácil de saltar)
-        altoObs = QRandomGenerator::global()->bounded(
-            static_cast<int>(alturaJugador * 0.2),
-            static_cast<int>(alturaJugador * 0.35)
-            );
+    // 5% chance de GAP (no crear obstáculo)
+    if (tipoObstaculo >= 95) {
+        ultimaPosicionSpawn = nuevaPosX;
+        contadorObstaculos++;
+        qDebug() << "GAP generado en posición:" << nuevaPosX;
+        return;
     }
-    else if (tipoObstaculo < 80) {
-        // 30% - Obstáculo BAJO-MEDIO
+
+    // Determinar altura del obstáculo
+    int altoObs;
+
+    if (tipoObstaculo < 40) {
+        // 40% - Obstáculo BAJO (35% a 50% de altura del jugador)
         altoObs = QRandomGenerator::global()->bounded(
             static_cast<int>(alturaJugador * 0.35),
             static_cast<int>(alturaJugador * 0.5)
             );
     }
-    else if (tipoObstaculo < 95) {
-        // 15% - Obstáculo MEDIO
+    else if (tipoObstaculo < 80) {
+        // 40% - Obstáculo MEDIO (50% a 65% de altura del jugador)
         altoObs = QRandomGenerator::global()->bounded(
             static_cast<int>(alturaJugador * 0.5),
             static_cast<int>(alturaJugador * 0.65)
             );
     }
     else {
-        // 5% - GAP (sin obstáculo)
-        ultimaPosicionSpawn = nuevaPosX;
-        contadorObstaculos++;
-        return;
+        // 15% - Obstáculo ALTO (65% a 80% de altura del jugador)
+        altoObs = QRandomGenerator::global()->bounded(
+            static_cast<int>(alturaJugador * 0.65),
+            static_cast<int>(alturaJugador * 0.80)
+            );
     }
 
-    // Ancho proporcional (más delgados)
+    // Ancho proporcional al alto
     int anchoMin = static_cast<int>(altoObs * 0.8);
     int anchoMax = static_cast<int>(altoObs * 1.3);
-    anchoObs = QRandomGenerator::global()->bounded(anchoMin, anchoMax);
+    int anchoObs = QRandomGenerator::global()->bounded(anchoMin, anchoMax);
 
+    // Posición Y (sobre el suelo)
     qreal posY = posYSuelo - altoObs;
 
-    Obstaculo* obs = new Obstaculo(nuevaPosX, posY, anchoObs, altoObs, Qt::darkGray);
+    // Crear obstáculo
+    Obstaculo* obs = new Obstaculo(nuevaPosX, posY, anchoObs, altoObs, Qt::transparent);
     obs->setZValue(10);
 
-    QStringList texturas = {
-        ":/Recursos/Objects/Obstaculos2.png"
-    };
+    // ===============================================================
+    // DECISIÓN DE DAÑO Y ASIGNACIÓN DE SPRITE
+    // ===============================================================
 
-    if (!texturas.isEmpty()) {
-        QString textura = texturas[QRandomGenerator::global()->bounded(texturas.size())];
-        obs->setTextura(textura, false);
+    // 30% de probabilidad de ser dañino
+    bool esDanino = (QRandomGenerator::global()->bounded(0, 100) < 30);
+
+    QString texturaSeleccionada;
+
+    if (esDanino) {
+        // ===== OBSTÁCULO DAÑINO =====
+        obs->setDanoValor(20);
+
+        // Lista de sprites dañinos
+        QStringList spritesDaninos = {
+            ":/Recursos/Objects/D_Obstaculo1.png",
+            ":/Recursos/Objects/D_Obstaculo2.png",
+            ":/Recursos/Objects/D_Obstaculo3.png"
+        };
+
+        // Seleccionar sprite aleatorio
+        int indice = QRandomGenerator::global()->bounded(spritesDaninos.size());
+        texturaSeleccionada = spritesDaninos[indice];
+
+        qDebug() << "Obstáculo DAÑINO creado en" << nuevaPosX
+                 << "Daño:" << obs->getDanoValor()
+                 << "Sprite:" << texturaSeleccionada;
+
+    } else {
+        // ===== OBSTÁCULO SEGURO =====
+        obs->setDanoValor(0);
+
+        // Lista de sprites seguros
+        QStringList spritesNoDestructivos = {
+            ":/Recursos/Objects/Obstaculo1.png",
+            ":/Recursos/Objects/Obstaculo2.png",
+            ":/Recursos/Objects/ND_Obstaculo3.png"
+        };
+
+        // Seleccionar sprite aleatorio
+        int indice = QRandomGenerator::global()->bounded(spritesNoDestructivos.size());
+        texturaSeleccionada = spritesNoDestructivos[indice];
+
+        qDebug() << "Obstáculo SEGURO creado en" << nuevaPosX
+                 << "Sprite:" << texturaSeleccionada;
     }
 
+    // ===============================================================
+    // CARGAR Y APLICAR SPRITE
+    // ===============================================================
+
+    QPixmap spritePixmap(texturaSeleccionada);
+
+    if (spritePixmap.isNull()) {
+        qDebug() << " ERROR: No se pudo cargar sprite:" << texturaSeleccionada;
+        qDebug() << "   Usando color de respaldo...";
+
+        // Color de respaldo según tipo
+        if (esDanino) {
+            obs->setColor(QColor(180, 0, 0)); // Rojo oscuro
+        } else {
+            obs->setColor(QColor(100, 100, 100)); // Gris
+        }
+    } else {
+        // Aplicar sprite (false = escalar para ajustar, no repetir)
+        obs->setTextura(spritePixmap, false);
+        qDebug() << "✓ Sprite cargado correctamente:" << texturaSeleccionada;
+    }
+
+    // Agregar a la escena y lista
     if (escena) escena->addItem(obs);
     obstaculos.append(obs);
 
     ultimaPosicionSpawn = nuevaPosX;
     contadorObstaculos++;
 }
+
 
 void Nivel2::limpiarObstaculosLejanos()
 {
@@ -460,7 +662,7 @@ void Nivel2::limpiarObstaculosLejanos()
         Obstaculo* obs = obstaculos[i];
 
         // NO eliminar los suelos base
-        if (obs == suelo || obs == suelo2) {
+        if (obs == suelo1 || obs == suelo2 || obs == suelo3) {
             ++i;
             continue;
         }
@@ -491,8 +693,7 @@ void Nivel2::reposicionarEscena()
     qreal centroEscena = sceneW * 0.5;
     qreal distanciaDelCentro = std::abs(jugador->x() - centroEscena);
 
-    // Reposicionar si está muy lejos del centro
-    if (distanciaDelCentro > vistaAncho * 1.0) {
+    if (distanciaDelCentro > vistaAncho * 1.2) {
 
         qreal desplazamiento = jugador->x() - centroEscena;
 
@@ -502,18 +703,12 @@ void Nivel2::reposicionarEscena()
         QList<QGraphicsItem*> items = escena->items();
 
         for (QGraphicsItem* item : items) {
-            // Excluir fondos (se manejan aparte)
-            if (item == fondo1 || item == fondo2) continue;
-
-            // Excluir suelos (se manejan aparte)
-            if (item == suelo || item == suelo2) continue;
+            // Excluir fondos y suelos (se manejan con sus propios sistemas)
+            if (item == fondo1 || item == fondo2 || item == fondo3) continue;
+            if (item == suelo1 || item == suelo2 || item == suelo3) continue;
 
             item->setX(item->x() - desplazamiento);
         }
-
-        // Ajustar suelos manualmente
-        if (suelo) suelo->setX(suelo->x() - desplazamiento);
-        if (suelo2) suelo2->setX(suelo2->x() - desplazamiento);
 
         // Ajustar variable de control
         ultimaPosicionSpawn -= desplazamiento;
@@ -526,19 +721,25 @@ void Nivel2::reposicionarEscena()
 // LOOP PRINCIPAL DE ACTUALIZACIÓN
 // ====================================================================
 
+// ====================================================================
+// LOOP PRINCIPAL DE ACTUALIZACIÓN
+// ====================================================================
+
 void Nivel2::actualizar()
 {
+    // Si el juego está en pausa (ej. después de morir), no hacer nada
     if (juegoEnPausa) {
         return;
     }
 
+    // 1. Ejecutar física base (movimiento del jugador, gravedad, si aplica)
     NivelBase::actualizar();
 
     if (!jugador || !escena || escena->views().isEmpty()) {
         return;
     }
 
-    // Forzar movimiento automático
+    // 2. Forzar movimiento automático (Corredor Infinito)
     Jugador* j_cast = dynamic_cast<Jugador*>(jugador);
     if (j_cast && j_cast->estaVivo()) {
         j_cast->rightPressed = true;
@@ -546,36 +747,19 @@ void Nivel2::actualizar()
     }
 
     QGraphicsView* vista = escena->views().first();
+    qreal alturaSuelo = sceneH * 0.85;
 
-    // *** ACTUALIZAR FONDO Y SUELO CON LA POSICIÓN DEL JUGADOR ***
+
+    // 3. Sistemas de bucle infinito (Parallax y Suelo)
     actualizarFondo(jugador->x());
     actualizarSuelo(jugador->x());
 
-    // Reposicionar escena si es necesario
+    // 4. Mantenimiento de la Escena (reposicionamiento)
     reposicionarEscena();
 
-    // Activar enemigo
-    static qreal ultimaPosicionJugador = jugador->x();
-    bool jugadorSeMovio = (jugador->x() != ultimaPosicionJugador);
-    ultimaPosicionJugador = jugador->x();
-
-    if (jugadorSeMovio && enemigoAtras && !enemigoAtras->estaActivo()) {
-        enemigoAtras->activarPersecucion();
-    }
-
-    // Generación continua de obstáculos
-    qreal limiteGeneracion = jugador->x() + vistaAncho * 1.2;
-
-    while (ultimaPosicionSpawn < limiteGeneracion) {
-        spawnearObstaculoAleatorio();
-    }
-
-    // Limpieza
-    limpiarObstaculosLejanos();
-
-    // Corrección enemigo
+    // 5. Lógica del Enemigo (activación y movimiento)
     if (enemigoAtras && jugador->estaVivo()) {
-        qreal alturaSuelo = sceneH * 0.85;
+        // Corrección de altura del enemigo (asegurar que esté en el suelo)
         qreal alturaEnemigo = enemigoAtras->boundingRect().height();
         qreal posYCorrecta = alturaSuelo - alturaEnemigo;
 
@@ -584,26 +768,120 @@ void Nivel2::actualizar()
             enemigoAtras->vy = 0;
             enemigoAtras->onGround = true;
         }
+
+        // Activación del enemigo si el jugador se movió lo suficiente
+        static qreal ultimaPosicionJugador = jugador->x();
+        bool jugadorSeMovio = (jugador->x() != ultimaPosicionJugador);
+        ultimaPosicionJugador = jugador->x();
+
+        if (jugadorSeMovio && !enemigoAtras->estaActivo()) {
+            enemigoAtras->activarPersecucion();
+        }
     }
 
-    // Colisión jugador-enemigo
+
+    // 6. Generación continua de obstáculos y Limpieza
+    qreal limiteGeneracion = jugador->x() + vistaAncho * 1.2;
+
+    while (ultimaPosicionSpawn < limiteGeneracion) {
+        spawnearObstaculoAleatorio();
+    }
+
+    limpiarObstaculosLejanos();
+
+    // --------------------------------------------------------------------
+    // 7. DETECCIÓN DE COLISIONES CON OBSTÁCULOS DAÑINOS (Punto de la corrección)
+    // --------------------------------------------------------------------
+    if (jugador && jugador->estaVivo()) {
+        QRectF rectJugador = jugador->sceneBoundingRect();
+
+        // ⚠️ DEPURACIÓN: Muestra la posición del jugador
+        // qDebug() << "Jugador en X:" << jugador->x() << " Y:" << jugador->y() << " Bounds:" << rectJugador;
+
+        for (Obstaculo* obs : obstaculos) {
+            // Saltar suelos (no hacen daño)
+            if (obs == suelo1 || obs == suelo2 || obs == suelo3) {
+                continue;
+            }
+
+            QRectF rectObstaculo = obs->sceneBoundingRect();
+            int dano = obs->getDanoValor();
+
+            // ⚠️ DEPURACIÓN: Chequeo de colisión
+            if (rectJugador.intersects(rectObstaculo)) {
+
+                if (dano > 0) { // Solo procesar obstáculos con daño
+
+                    qDebug() << "🚨 INTERSECCIÓN DETECTADA con obstáculo! Daño:" << dano
+                             << "Cooldown transcurrido (ms):" << danoObstaculoTimer.elapsed();
+
+                    // Aplicar daño con cooldown (cada 400ms)
+                    if (danoObstaculoTimer.elapsed() > 400) {
+
+                        jugador->recibirDanio(dano); // <-- APLICACIÓN DEL DAÑO
+
+                        qDebug() << "✅ DAÑO APLICADO. Vida restante:" << jugador->getVida();
+
+                        // Efecto de retroceso (knockback)
+                        qreal pushBack = -40.0;
+                        jugador->setX(jugador->x() + pushBack);
+
+                        // Asegurar que el jugador no caiga del suelo
+                        jugador->setY(alturaSuelo - jugador->boundingRect().height());
+
+                        // Reiniciar el timer solo si el jugador sobrevive
+                        if (jugador->estaVivo()) {
+                            danoObstaculoTimer.restart();
+                        }
+                    }
+                }
+
+                // --------------------------------------------------------------------
+                // VERIFICACIÓN DE MUERTE DEL JUGADOR
+                // Esto debe estar dentro del loop de colisión, pero después del daño
+                // --------------------------------------------------------------------
+                if (!jugador->estaVivo()) {
+                    qDebug() << "💀 Jugador murió por obstáculo dañino. Iniciando Game Over.";
+                    Jugador* j = dynamic_cast<Jugador*>(jugador);
+                    if (j) j->activarAnimacionMuerte();
+                    if (enemigoAtras) enemigoAtras->activarAnimacionMuerte();
+
+                    juegoEnPausa = true;
+
+                    // Esperar 900ms para la animación de muerte antes de terminar el juego
+                    QTimer::singleShot(900, this, [this]() {
+                        emit juegoTerminado();
+                    });
+                    return; // Salir de actualizar()
+                }
+
+                break; // Solo procesar una colisión de daño por frame
+            }
+        }
+    }
+
+    // --------------------------------------------------------------------
+    // 8. Colisión Jugador-Enemigo
+    // --------------------------------------------------------------------
     if (enemigoAtras && jugador && jugador->estaVivo()) {
         QRectF rectJugador = jugador->sceneBoundingRect();
         QRectF rectEnemigo = enemigoAtras->sceneBoundingRect();
 
-        static QElapsedTimer danoTimer;
-        if (!danoTimer.isValid()) {
-            danoTimer.start();
+        static QElapsedTimer danoTimerEnemigo; // Timer para colisión de enemigo
+        if (!danoTimerEnemigo.isValid()) {
+            danoTimerEnemigo.start();
         }
 
         if (rectJugador.intersects(rectEnemigo)) {
+            qDebug() << "🚨 INTERSECCIÓN DETECTADA con ENEMIGO. Cooldown (ms):" << danoTimerEnemigo.elapsed();
 
-            if (danoTimer.elapsed() > 300) {
+            if (danoTimerEnemigo.elapsed() > 300) {
                 jugador->recibirDanio(50);
-                danoTimer.restart();
+                danoTimerEnemigo.restart();
+                qDebug() << "✅ DAÑO ENEMIGO APLICADO. Vida restante:" << jugador->getVida();
 
+                // Knockback y ajuste de altura... (lógica de retroceso)
                 qreal push = 30.0;
-
                 if (jugador->x() < enemigoAtras->x()) {
                     jugador->setX(jugador->x() - push);
                     enemigoAtras->setX(enemigoAtras->x() + push * 0.5);
@@ -611,13 +889,13 @@ void Nivel2::actualizar()
                     jugador->setX(jugador->x() + push);
                     enemigoAtras->setX(enemigoAtras->x() - push * 0.5);
                 }
-
-                qreal alturaSuelo2 = sceneH * 0.85;
-                jugador->setY(alturaSuelo2 - jugador->boundingRect().height());
-                enemigoAtras->setY(alturaSuelo2 - enemigoAtras->boundingRect().height());
+                jugador->setY(alturaSuelo - jugador->boundingRect().height());
+                enemigoAtras->setY(alturaSuelo - enemigoAtras->boundingRect().height());
             }
 
+            // Verificación de muerte (por enemigo)
             if (!jugador->estaVivo()) {
+                qDebug() << "💀 Jugador murió por ENEMIGO. Iniciando Game Over.";
                 Jugador* j = dynamic_cast<Jugador*>(jugador);
                 if (j) j->activarAnimacionMuerte();
                 if (enemigoAtras) enemigoAtras->activarAnimacionMuerte();
@@ -632,10 +910,33 @@ void Nivel2::actualizar()
         }
     }
 
-    // Movimiento de cámara
+
+    // 9. Movimiento de cámara (centrar en el jugador)
     qreal camaraX = jugador->x();
     vista->centerOn(camaraX, sceneH * 0.5);
 }
+
+// ====================================================================
+// 5. VERIFICAR RUTAS DE SPRITES EN TU ARCHIVO .QRC
+// ====================================================================
+
+/*
+IMPORTANTE: Verifica que estas rutas existan en tu archivo de recursos (.qrc):
+
+SPRITES NO DAÑINOS (deben existir):
+- :/Recursos/Objects/Obstaculo1.png
+- :/Recursos/Objects/Obstaculo2.png
+- :/Recursos/Objects/ND_Obstaculo3.png
+
+SPRITES DAÑINOS (deben existir):
+- :/Recursos/Objects/D_Obstaculo1.png
+- :/Recursos/Objects/D_Obstaculo2.png
+- :/Recursos/Objects/D_Obstaculo3.png
+
+Si alguna ruta no existe, el código usará colores de respaldo:
+- Dañinos: Rojo oscuro (RGB: 180, 0, 0)
+- Seguros: Gris (RGB: 100, 100, 100)
+*/
 
 // ====================================================================
 // GAME OVER Y REINICIO
@@ -661,7 +962,7 @@ void Nivel2::manejarTecla(Qt::Key key)
         // Limpiar obstáculos (excepto suelos)
         for (int i = 0; i < obstaculos.size(); ) {
             Obstaculo* obs = obstaculos[i];
-            if (obs != suelo && obs != suelo2) {
+            if (obs != suelo1 && obs != suelo2 && obs != suelo3) {
                 escena->removeItem(obs);
                 delete obs;
                 obstaculos.removeAt(i);
@@ -703,16 +1004,18 @@ void Nivel2::manejarTecla(Qt::Key key)
             enemigoAtras->setPos(posEnemigoX, posEnemigoY);
         }
 
-        // Reiniciar suelos
-        if (suelo && suelo2) {
-            suelo->setX(0);
+        // Reiniciar suelos TRIPLE
+        if (suelo1 && suelo2 && suelo3) {
+            suelo1->setX(0);
             suelo2->setX(anchoSuelo);
+            suelo3->setX(anchoSuelo * 2);
         }
 
-        // Reiniciar fondos
-        if (fondo1 && fondo2) {
+        // Reiniciar fondos TRIPLE
+        if (fondo1 && fondo2 && fondo3) {
             fondo1->setPos(0, 0);
             fondo2->setPos(anchoFondo, 0);
+            fondo3->setPos(anchoFondo * 2, 0);
         }
 
         // Reiniciar spawning
@@ -730,7 +1033,7 @@ void Nivel2::manejarTecla(Qt::Key key)
             vista->centerOn(jugador);
         }
 
-        qDebug() << "Nivel reiniciado completamente";
+        qDebug() << "Nivel reiniciado con sistema TRIPLE";
     }
     else if (key == Qt::Key_Escape) {
         qDebug() << "Volver al menú...";

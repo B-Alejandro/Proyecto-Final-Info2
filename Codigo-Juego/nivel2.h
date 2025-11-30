@@ -6,14 +6,10 @@
 #include "obstaculo.h"
 #include "GameOverScreen.h"
 #include <QGraphicsPixmapItem>
-
-/*
-  Clase Nivel2 - CORREDOR INFINITO MEJORADO
-  - Sistema dual de fondos con parallax
-  - Sistema dual de suelos con reposicionamiento
-  - Generación procedural de obstáculos
-  - Limpieza automática de elementos fuera de vista
-*/
+#include <QElapsedTimer>
+#include <QWidget>
+#include <QLabel>
+#include <QVBoxLayout>
 
 class Nivel2 : public NivelBase
 {
@@ -38,44 +34,59 @@ private slots:
     void onJuegoTerminado();
 
 private:
-    // *** SISTEMA DE CORREDOR INFINITO ***
+    // HUD
+    QWidget* hudWidget;
+    QLabel* vidaLabel;
+    QLabel* tiempoLabel;
+    QLabel* scoreLabel;
 
-    // Generación y limpieza de obstáculos
+    // Métodos privados
     void spawnearObstaculoAleatorio();
     void limpiarObstaculosLejanos();
     void reposicionarEscena();
-
-    // Sistema de fondo dual con parallax
     void crearFondoDinamico();
     void actualizarFondo(qreal posicionJugador);
-
-    // Sistema de suelo dual con reposicionamiento
-    void crearSueloDual();
+    void crearSueloTriple();
     void actualizarSuelo(qreal posicionJugador);
 
-    // *** VARIABLES DE CONTROL ***
+    // *** VARIABLES EN ORDEN DE INICIALIZACIÓN ***
+
+    // Entidades del nivel
+    Enemigo* enemigoAtras;
+
+    // Suelos (sistema triple)
+    Obstaculo* suelo1;
+    Obstaculo* suelo2;
+    Obstaculo* suelo3;
+
+    GameOverScreen* pantallaGameOver;
+    bool juegoEnPausa;
+
+    // Sistema de fondo parallax (sistema triple)
+    QGraphicsPixmapItem* fondo1;
+    QGraphicsPixmapItem* fondo2;
+    QGraphicsPixmapItem* fondo3;
+    qreal anchoFondo;
+
+    // Sistema de suelo
+    qreal anchoSuelo;
+
+    // Dimensiones de vista
+    int vistaAncho;
+    int vistaAlto;
+
+    // Control de generación de obstáculos
     qreal distanciaEntreObstaculos;
     qreal ultimaPosicionSpawn;
     int contadorObstaculos;
 
-    // *** ENTIDADES DEL NIVEL ***
-    Enemigo* enemigoAtras;
-    Obstaculo* suelo;        // Suelo 1 (parte del sistema dual)
-    Obstaculo* suelo2;       // Suelo 2 (parte del sistema dual)
-    GameOverScreen* pantallaGameOver;
-    bool juegoEnPausa;
-
-    // *** DIMENSIONES ***
-    int vistaAncho;
-    int vistaAlto;
-
-    // *** SISTEMA DE FONDO PARALLAX DUAL ***
-    QGraphicsPixmapItem* fondo1;
-    QGraphicsPixmapItem* fondo2;
-    qreal anchoFondo;
-
-    // *** SISTEMA DE SUELO DUAL ***
-    qreal anchoSuelo;
+    // Timer para cooldown de daño por obstáculos
+    QElapsedTimer danoObstaculoTimer;
+    QGraphicsTextItem* textoVida;
+    QGraphicsTextItem* textoTiempo;
+    QElapsedTimer tiempoJugado;
+    QTimer* timerVictoria; // Temporizador de 20 segundos
+    const int DURACION_NIVEL_MS = 20000; // 20 segundos
 };
 
 #endif // NIVEL2_H

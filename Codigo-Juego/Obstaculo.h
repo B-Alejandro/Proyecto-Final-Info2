@@ -17,11 +17,7 @@ enum class TipoFisico {
 class Obstaculo : public QGraphicsRectItem
 {
 public:
-    Obstaculo(qreal x,
-              qreal y,
-              qreal w,
-              qreal h,
-              QColor color);
+    Obstaculo(qreal x, qreal y, qreal w, qreal h, QColor color = Qt::transparent);
 
     void setColor(const QColor& color);
     void setBorderColor(const QColor& color, int width);
@@ -29,13 +25,17 @@ public:
     // Metodo para obtener el tipo fisico
     TipoFisico getTipoFisico() const { return TipoFisico::OBSTACULO; }
 
-    // NUEVO: Métodos para agregar textura/imagen
+    // Métodos para agregar textura/imagen
     void setTextura(const QString& rutaImagen, bool repetir = true);
     void setTextura(const QPixmap& pixmap, bool repetir = true);
     void limpiarTextura(); // Volver a usar solo color
 
+    // NUEVO: Métodos para daño
+    void setDanoValor(int dano) { danoValor = dano; }
+    int getDanoValor() const { return danoValor; }
+
 protected:
-    // NUEVO: Sobrescribir paint para dibujar la textura
+    // Sobrescribir paint para dibujar la textura
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
 
 private:
@@ -43,6 +43,9 @@ private:
     bool tieneTextura;
     QPixmap texturaPixmap;
     bool repetirTextura;
+
+    // NUEVO: Valor de daño que este obstáculo aplica al jugador
+    int danoValor;
 };
 
 #endif // OBSTACULO_H
