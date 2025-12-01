@@ -5,11 +5,11 @@
 #include <QGraphicsScene>
 
 /*
-  Persona.cpp corregido
-  - Restaura el timer interno de movimiento para compatibilidad con Nivel1
-  - Mantiene el sistema de vida mejorado con invulnerabilidad
-  - boundingRect declarado en header y definido aqui
-  - paint dibuja sin escalado para evitar parpadeo
+ Persona.cpp corregido
+ - Restaura el timer interno de movimiento para compatibilidad con Nivel1
+ - Mantiene el sistema de vida mejorado con invulnerabilidad
+ - boundingRect declarado en header y definido aqui
+ - paint dibuja sin escalado para evitar parpadeo
 */
 
 /* Constructor: inicializacion en el mismo orden que los miembros en persona.h */
@@ -95,7 +95,7 @@ void Persona::recibirDanio(int cantidad)
     timerInvulnerabilidad->start(200);
 
     if (vidaActual <= 0) {
-        qDebug() << "Persona murió, eliminando de escena";
+        qDebug() << "Persona murió, activando secuencia de Game Over";
         setAnimacion(EstadoAnimacion::MUERTO);
 
         // *** DETENER MOVIMIENTO AL MORIR ***
@@ -103,13 +103,18 @@ void Persona::recibirDanio(int cantidad)
         if (timerAnimacion) timerAnimacion->stop();
 
         emit murioPersona();
-        emit died(this);  // Para compatibilidad con nivel 1
+        emit died(this); // Para compatibilidad con nivel 1
 
-        // *** ELIMINAR DE LA ESCENA INMEDIATAMENTE ***
+        // *** CORRECCIÓN: NO ELIMINAR AQUI ***
+        // Dejar que NivelBase complete la secuencia de 'Game Over' (QTimer::singleShot)
+        // para dar tiempo a que se ejecute la animación de muerte.
+        // Las siguientes líneas deben ser ELIMINADAS/COMENTADAS
+        /*
         if (scene()) {
             scene()->removeItem(this);
         }
         deleteLater();
+        */
     }
 }
 
@@ -168,7 +173,7 @@ void Persona::reanudarAnimacion()
 {
     animacionPausada = false;
     if (timerAnimacion) timerAnimacion->start(60);
-    if (timer) timer->start(16);  // También reanudar movimiento
+    if (timer) timer->start(16); // También reanudar movimiento
 }
 
 void Persona::handleInput()

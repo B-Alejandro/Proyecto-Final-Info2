@@ -7,8 +7,10 @@ CONFIG += qt
 SOURCES += \
     Obstaculo.cpp \
     enemigo.cpp \
+    explosion.cpp \
     fisica.cpp \
     gameoverscreen.cpp \
+    hudnivel1.cpp \
     juego.cpp \
     jugador.cpp \
     main.cpp \
@@ -17,13 +19,18 @@ SOURCES += \
     nivel3.cpp \
     nivelbase.cpp \
     persona.cpp \
-    proyectil.cpp
+    proyectil.cpp \
+    proyectiltanque.cpp \
+    tanque.cpp \
+    victoriascreen.cpp
 
 HEADERS += \
     Obstaculo.h \
     enemigo.h \
+    explosion.h \
     fisica.h \
     gameoverscreen.h \
+    hudnivel1.h \
     juego.h \
     jugador.h \
     nivel1.h \
@@ -31,7 +38,10 @@ HEADERS += \
     nivel3.h \
     nivelbase.h \
     persona.h \
-    proyectil.h
+    proyectil.h \
+    proyectiltanque.h \
+    tanque.h \
+    victoriascreen.h
 
 FORMS +=
 
