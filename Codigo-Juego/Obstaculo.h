@@ -3,6 +3,7 @@
 #define OBSTACULO_H
 
 #include <QGraphicsRectItem>
+#include <QObject>
 #include <QColor>
 #include <QPixmap>
 #include <QPainter>
@@ -14,10 +15,17 @@ enum class TipoFisico {
     OBSTACULO
 };
 
-class Obstaculo : public QGraphicsRectItem
+class Obstaculo : public QObject, public QGraphicsRectItem
 {
+    Q_OBJECT
+
 public:
-    Obstaculo(qreal x, qreal y, qreal w, qreal h, QColor color = Qt::transparent);
+    Obstaculo(qreal x,
+              qreal y,
+              qreal w,
+              qreal h,
+              QColor color,
+              bool esMovil = false); // Constructor unificado con flag móvil
 
     void setColor(const QColor& color);
     void setBorderColor(const QColor& color, int width);
@@ -30,9 +38,27 @@ public:
     void setTextura(const QPixmap& pixmap, bool repetir = true);
     void limpiarTextura(); // Volver a usar solo color
 
-    // NUEVO: Métodos para daño
-    void setDanoValor(int dano) { danoValor = dano; }
-    int getDanoValor() const { return danoValor; }
+    // *** Sistema de vida y movimiento ***
+    void setMovil(bool movil) { esMovil = movil; }
+    bool isMovil() const { return esMovil; }
+
+    void setVida(int vida) { vidaActual = vida; vidaMaxima = vida; }
+    int getVida() const { return vidaActual; }
+    bool estaVivo() const { return vidaActual > 0; }
+    void recibirDanio(int cantidad);
+
+    void setVelocidad(qreal vel) { velocidad = vel; }
+    qreal getVelocidad() const { return velocidad; }
+
+    void setDanioColision(int danio) { danioAlJugador = danio; }
+    int getDanioColision() const { return danioAlJugador; }
+
+    // Actualizar posición (llamar cada frame)
+    void actualizar(qreal sceneH);
+
+signals:
+    // REVERTIDO: Vuelve a usar Obstaculo* para que coincida con el slot en nivel1.cpp
+    void obstaculoMuerto(Obstaculo* obs);
 
 protected:
     // Sobrescribir paint para dibujar la textura
@@ -44,8 +70,12 @@ private:
     QPixmap texturaPixmap;
     bool repetirTextura;
 
-    // NUEVO: Valor de daño que este obstáculo aplica al jugador
-    int danoValor;
+    // Atributos de obstáculo móvil, vida y daño (unificados)
+    bool esMovil;
+    int vidaActual = 0;
+    int vidaMaxima = 0;
+    qreal velocidad = 0;
+    int danioAlJugador = 0;
 };
 
 #endif // OBSTACULO_H

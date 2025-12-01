@@ -42,7 +42,7 @@ void Jugador::cargarSpritesnivel2()
 
     if (spriteCorrer.isNull()) {
         qDebug() << " ERROR: No se pudo cargar" << rutaRun;
-        qDebug() << "   Verifica que el archivo existe en el .qrc";
+        qDebug() << "     Verifica que el archivo existe en el .qrc";
     } else {
         qDebug() << " Sprite correr cargado:" << spriteCorrer.width() << "x" << spriteCorrer.height();
     }

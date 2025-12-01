@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QGraphicsView>
 #include <QTimer>
+#include <QKeyEvent>  // *** NUEVO: AGREGAR ESTA LÍNEA ***
 
 class NivelBase;
 
@@ -20,6 +21,10 @@ public:
     QGraphicsView* getVista() { return vista; }
     int getVistaAncho() const { return vistaAncho; }
     int getVistaAlto() const { return vistaAlto; }
+
+protected:
+    // *** NUEVO: Capturar eventos de teclado globales ***
+    bool eventFilter(QObject* obj, QEvent* event) override;
 
 private slots:
     void actualizar();

@@ -5,15 +5,18 @@
         <file>Recursos/Sprites/Dead.png</file>
         <file>Recursos/Sprites/Run_soldier.png</file>
         <file>Recursos/Sprites/Attacck.png</file>
-        <file>Recursos/Backgrounds/unnamed (1).jpg</file>
-        <file>Recursos/Backgrounds/tierra.jpg</file>
-        <file>Recursos/Objects/Obstaculos2.png</file>
         <file>Recursos/Sprites/Soldier_Idle.png</file>
         <file>Recursos/Sprites/Idle_homeless.png</file>
+
+        <file>Recursos/Backgrounds/unnamed (1).jpg</file>
+        <file>Recursos/Backgrounds/tierra.jpg</file>
+
+        <file>Recursos/Objects/Obstaculos1.png</file>
+        <file>Recursos/Objects/Obstaculos2.png</file>
         <file>Recursos/Objects/D_Obstaculo1.png</file>
         <file>Recursos/Objects/D-Obstaculo2.png</file>
         <file>Recursos/Objects/D-Obstaculo3.png</file>
         <file>Recursos/Objects/ND-Obstaculo3.png</file>
-        <file>Recursos/Objects/Obstaculos1.png</file>
+        <file>Recursos/Objects/Rocas.png</file>
     </qresource>
 </RCC>

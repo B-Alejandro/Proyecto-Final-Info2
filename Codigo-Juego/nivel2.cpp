@@ -57,6 +57,7 @@ Nivel2::Nivel2(Juego* juego, QObject* parent)
 
     crearEscena(anchoEscena, altoEscena);
 
+    // Conecta la señal (declarada en nivel2.h) con el slot
     connect(this, &Nivel2::juegoTerminado, this, &Nivel2::onJuegoTerminado);
 }
 
@@ -69,11 +70,23 @@ Nivel2::~Nivel2()
 }
 
 // ====================================================================
+// IMPLEMENTACIÓN NUEVA
+// ====================================================================
+
+// Implementación del método público para que juego.cpp pueda verificar el estado
+bool Nivel2::estaEnGameOver() const
+{
+    return juegoEnPausa;
+}
+
+// ====================================================================
 // GESTIÓN DE FONDO PARALLAX - SISTEMA TRIPLE
 // ====================================================================
 void Nivel2::crearFondoDinamico()
 {
+    // ... (resto de crearFondoDinamico sin cambios)
     QPixmap fondoPixmap(":/Recursos/Backgrounds/unnamed (1).jpg");
+    int sceneH = this->sceneH;
 
     if (fondoPixmap.isNull()) {
         qDebug() << "No se pudo cargar la imagen del fondo, creando fondo de respaldo";
@@ -96,6 +109,8 @@ void Nivel2::crearFondoDinamico()
             painter.end();
             fondoPixmap = fondoExtendido;
         }
+
+        fondoPixmap = fondoPixmap.scaledToHeight(sceneH, Qt::SmoothTransformation);
     }
 
     anchoFondo = fondoPixmap.width();
@@ -137,11 +152,10 @@ void Nivel2::crearFondoDinamico()
     qDebug() << "Sistema de fondo TRIPLE creado. Ancho de cada fondo:" << anchoFondo;
 }
 
-// --- ARCHIVO nivel2.cpp (FUNCIÓN CORREGIDA) ---
-// --- nivel2.cpp (FUNCIÓN actualizarFondo CORREGIDA) ---
-// --- nivel2.cpp (FUNCIÓN actualizarFondo CORREGIDA) ---
 void Nivel2::actualizarFondo(qreal posicionJugador)
 {
+    Q_UNUSED(posicionJugador); // <-- CORRECCIÓN: Evita el warning de parámetro no utilizado.
+
     if (!fondo1 || !fondo2 || !fondo3 || anchoFondo <= 0) return;
 
     qreal factorParallax = 0.3; // 30% de velocidad (el fondo se mueve más lento)
@@ -152,14 +166,11 @@ void Nivel2::actualizarFondo(qreal posicionJugador)
     qreal desplazamientoParallax = desplazamientoCamara * (1.0 - factorParallax);
 
     // 2. Aplicar el desplazamiento parallax a cada fondo
-    //    IMPORTANTE: Usamos una posición base virtual para cada fondo
     fondo1->setX(0 - desplazamientoParallax);
     fondo2->setX(anchoFondo - desplazamientoParallax);
     fondo3->setX(anchoFondo * 2 - desplazamientoParallax);
 
     // 3. Sistema de bucle infinito con reposicionamiento suave
-    //    La clave es mantener siempre 3 fondos en cascada perfecta
-
     qreal limiteIzquierdo = posicionCamara - vistaAncho * 1.5;
 
     // Obtener las posiciones actuales
@@ -173,9 +184,6 @@ void Nivel2::actualizarFondo(qreal posicionJugador)
     if (pos3 > maxPosActual) maxPosActual = pos3;
 
     // Reposicionar cada fondo que sale del límite izquierdo
-    // La nueva posición siempre es: (posición máxima actual + anchoFondo)
-    // Esto garantiza continuidad perfecta
-
     if (pos1 + anchoFondo < limiteIzquierdo) {
         qreal nuevaPos = maxPosActual + anchoFondo;
         fondo1->setX(nuevaPos);
@@ -208,6 +216,7 @@ void Nivel2::actualizarFondo(qreal posicionJugador)
 
 void Nivel2::crearSueloTriple()
 {
+    // ... (resto de crearSueloTriple sin cambios)
     qreal posYSuelo = sceneH * 0.85;
     qreal alturaSuelo = sceneH * 0.15;
 
@@ -253,10 +262,9 @@ void Nivel2::crearSueloTriple()
 
     qDebug() << "Sistema de suelo TRIPLE creado. Ancho de cada suelo:" << anchoSuelo;
 }
-// --- ARCHIVO nivel2.cpp (FUNCIÓN CORREGIDA) ---
-// --- ARCHIVO nivel2.cpp (FUNCIÓN CORREGIDA) ---
 void Nivel2::actualizarSuelo(qreal posicionJugador)
 {
+    // ... (resto de actualizarSuelo sin cambios)
     if (!suelo1 || !suelo2 || !suelo3 || anchoSuelo <= 0) return;
 
     qreal posicionCamara = posicionJugador;
@@ -311,12 +319,9 @@ void Nivel2::actualizarSuelo(qreal posicionJugador)
 // CONFIGURACIÓN INICIAL
 // ====================================================================
 
-// ====================================================================
-// 2. REEMPLAZAR configurarNivel() - Inicializar timer de daño
-// ====================================================================
-
 void Nivel2::configurarNivel()
 {
+    // ... (resto de configurarNivel sin cambios)
     // Inicializar timer de daño
     if (!danoObstaculoTimer.isValid()) {
         danoObstaculoTimer.start();
@@ -331,6 +336,8 @@ void Nivel2::configurarNivel()
     // Crear jugador centrado
     qreal anchoJugador = sceneH * 0.15;
     qreal altoJugador = sceneH * 0.15;
+
+    int sceneW = this->sceneW;
 
     jugador = new Jugador(anchoJugador, altoJugador, sceneW, sceneH, TipoMovimiento::CON_GRAVEDAD);
     jugador->setVida(100);
@@ -369,15 +376,7 @@ void Nivel2::configurarNivel()
         jugador->setFocus();
 
         vista->centerOn(jugador);
-        // Crear HUD (vida, tiempo, score)
-        // Documentacion basica:
-        // Se crea un QWidget sobre el QGraphicsView para mostrar informacion.
-        // Se usan QLabel para mostrar texto de manera sencilla.
-
-        // HUD estilo arcade
-        // Documentacion basica:
-        // Se crea un widget con fondo transparente y labels con estilo tipo arcade.
-
+        // Crear HUD
         if (escena && !escena->views().isEmpty()) {
 
             QGraphicsView* vista = escena->views().first();
@@ -442,14 +441,13 @@ void Nivel2::configurarNivel()
             tiempoJugado.start();
         }
 
-        }
-
+    }
 }
-
 
 
 void Nivel2::crearEnemigos()
 {
+    // ... (resto de crearEnemigos sin cambios)
     if (!jugador) return;
 
     qreal alturaSuelo = sceneH * 0.85;
@@ -457,6 +455,8 @@ void Nivel2::crearEnemigos()
 
     qreal posEnemigoX = jugador->x() - vistaAncho * 0.3;
     qreal posEnemigoY = alturaSuelo - sizeEnemigo;
+
+    int sceneW = this->sceneW;
 
     enemigoAtras = new Enemigo(sizeEnemigo,
                                sizeEnemigo,
@@ -501,6 +501,7 @@ void Nivel2::crearEnemigos()
 
 void Nivel2::crearObstaculos()
 {
+    // ... (resto de crearObstaculos sin cambios)
     qDebug() << "=== INICIALIZANDO SISTEMA DE CORREDOR INFINITO ===";
 
     // El suelo ya fue creado en crearSueloTriple()
@@ -516,8 +517,10 @@ void Nivel2::crearObstaculos()
 
     qDebug() << "Sistema infinito inicializado con" << obstaculosIniciales << "obstáculos";
 }
+
 void Nivel2::spawnearObstaculoAleatorio()
 {
+    // ... (resto de spawnearObstaculoAleatorio sin cambios)
     qreal posYSuelo = sceneH * 0.85;
     qreal alturaJugador = sceneH * 0.15;
 
@@ -584,7 +587,7 @@ void Nivel2::spawnearObstaculoAleatorio()
 
     if (esDanino) {
         // ===== OBSTÁCULO DAÑINO =====
-        obs->setDanoValor(20);
+        obs->setDanioColision(20);
 
         // Lista de sprites dañinos
         QStringList spritesDaninos = {
@@ -598,12 +601,12 @@ void Nivel2::spawnearObstaculoAleatorio()
         texturaSeleccionada = spritesDaninos[indice];
 
         qDebug() << "Obstáculo DAÑINO creado en" << nuevaPosX
-                 << "Daño:" << obs->getDanoValor()
+                 << "Daño:" << obs->getDanioColision()
                  << "Sprite:" << texturaSeleccionada;
 
     } else {
         // ===== OBSTÁCULO SEGURO =====
-        obs->setDanoValor(0);
+        obs->setDanioColision(0);
 
         // Lista de sprites seguros
         QStringList spritesNoDestructivos = {
@@ -653,6 +656,7 @@ void Nivel2::spawnearObstaculoAleatorio()
 
 void Nivel2::limpiarObstaculosLejanos()
 {
+    // ... (resto de limpiarObstaculosLejanos sin cambios)
     if (!jugador) return;
 
     qreal limiteEliminacion = jugador->x() - vistaAncho * 1.5;
@@ -688,6 +692,7 @@ void Nivel2::limpiarObstaculosLejanos()
 
 void Nivel2::reposicionarEscena()
 {
+    // ... (resto de reposicionarEscena sin cambios)
     if (!jugador || !escena) return;
 
     qreal centroEscena = sceneW * 0.5;
@@ -716,10 +721,6 @@ void Nivel2::reposicionarEscena()
         qDebug() << "Escena reposicionada";
     }
 }
-
-// ====================================================================
-// LOOP PRINCIPAL DE ACTUALIZACIÓN
-// ====================================================================
 
 // ====================================================================
 // LOOP PRINCIPAL DE ACTUALIZACIÓN
@@ -790,13 +791,10 @@ void Nivel2::actualizar()
     limpiarObstaculosLejanos();
 
     // --------------------------------------------------------------------
-    // 7. DETECCIÓN DE COLISIONES CON OBSTÁCULOS DAÑINOS (Punto de la corrección)
+    // 7. DETECCIÓN DE COLISIONES CON OBSTÁCULOS DAÑINOS
     // --------------------------------------------------------------------
     if (jugador && jugador->estaVivo()) {
         QRectF rectJugador = jugador->sceneBoundingRect();
-
-        // ⚠️ DEPURACIÓN: Muestra la posición del jugador
-        // qDebug() << "Jugador en X:" << jugador->x() << " Y:" << jugador->y() << " Bounds:" << rectJugador;
 
         for (Obstaculo* obs : obstaculos) {
             // Saltar suelos (no hacen daño)
@@ -805,7 +803,7 @@ void Nivel2::actualizar()
             }
 
             QRectF rectObstaculo = obs->sceneBoundingRect();
-            int dano = obs->getDanoValor();
+            int dano = obs->getDanioColision();
 
             // ⚠️ DEPURACIÓN: Chequeo de colisión
             if (rectJugador.intersects(rectObstaculo)) {
@@ -838,7 +836,6 @@ void Nivel2::actualizar()
 
                 // --------------------------------------------------------------------
                 // VERIFICACIÓN DE MUERTE DEL JUGADOR
-                // Esto debe estar dentro del loop de colisión, pero después del daño
                 // --------------------------------------------------------------------
                 if (!jugador->estaVivo()) {
                     qDebug() << "💀 Jugador murió por obstáculo dañino. Iniciando Game Over.";
@@ -850,7 +847,7 @@ void Nivel2::actualizar()
 
                     // Esperar 900ms para la animación de muerte antes de terminar el juego
                     QTimer::singleShot(900, this, [this]() {
-                        emit juegoTerminado();
+                        emit juegoTerminado(); // <-- CORRECCIÓN: Emitir la señal
                     });
                     return; // Salir de actualizar()
                 }
@@ -903,7 +900,7 @@ void Nivel2::actualizar()
                 juegoEnPausa = true;
 
                 QTimer::singleShot(900, this, [this]() {
-                    emit juegoTerminado();
+                    emit juegoTerminado(); // <-- CORRECCIÓN: Emitir la señal
                 });
                 return;
             }
@@ -915,28 +912,6 @@ void Nivel2::actualizar()
     qreal camaraX = jugador->x();
     vista->centerOn(camaraX, sceneH * 0.5);
 }
-
-// ====================================================================
-// 5. VERIFICAR RUTAS DE SPRITES EN TU ARCHIVO .QRC
-// ====================================================================
-
-/*
-IMPORTANTE: Verifica que estas rutas existan en tu archivo de recursos (.qrc):
-
-SPRITES NO DAÑINOS (deben existir):
-- :/Recursos/Objects/Obstaculo1.png
-- :/Recursos/Objects/Obstaculo2.png
-- :/Recursos/Objects/ND_Obstaculo3.png
-
-SPRITES DAÑINOS (deben existir):
-- :/Recursos/Objects/D_Obstaculo1.png
-- :/Recursos/Objects/D_Obstaculo2.png
-- :/Recursos/Objects/D_Obstaculo3.png
-
-Si alguna ruta no existe, el código usará colores de respaldo:
-- Dañinos: Rojo oscuro (RGB: 180, 0, 0)
-- Seguros: Gris (RGB: 100, 100, 100)
-*/
 
 // ====================================================================
 // GAME OVER Y REINICIO
@@ -953,6 +928,7 @@ void Nivel2::onJuegoTerminado()
 
 void Nivel2::manejarTecla(Qt::Key key)
 {
+    // ... (resto de manejarTecla sin cambios)
     if (!juegoEnPausa) return;
 
     if (key == Qt::Key_R) {

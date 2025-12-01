@@ -9,8 +9,9 @@
 #include <QObject> // Asegurar que QObject está incluido
 
 /*
-  Persona.h
-  Clase base para entidades con movimiento, fisica y animacion por sprites.
+ Persona.h
+ Clase base para entidades con movimiento, fisica y animacion por sprites.
+ Esta version declara boundingRect() para evitar warnings y errores de definicion fuera de linea.
 */
 
 enum class TipoMovimiento {
@@ -99,7 +100,7 @@ protected:
     double sceneH;
     double speed;
 
-    // timer de movimiento
+    // timer de movimiento NO usado internamente; se gestiona desde NivelBase
     QTimer* timer;
 
     // sistema de sprites

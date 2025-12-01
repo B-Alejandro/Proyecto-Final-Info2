@@ -1,6 +1,7 @@
 #include "enemigo.h"
 #include "obstaculo.h"
 #include "jugador.h"
+#include "proyectil.h" // Se mantiene el include de proyectil
 #include <QBrush>
 #include <QRandomGenerator>
 #include <QGraphicsScene>
@@ -8,10 +9,10 @@
 #include <QDebug>
 
 /*
-  Constructor unificado
+ Constructor unificado
 
-  nivel == 1  -> IA simple, movimiento rectilineo descendente, poca vida
-  nivel != 1  -> IA avanzada: persecucion, salto inteligente, sprites
+ nivel == 1  -> IA simple (descendente, disparo), poca vida
+ nivel != 1  -> IA avanzada (persecucion, salto inteligente), más vida
 */
 Enemigo::Enemigo(qreal w,
                  qreal h,
@@ -28,6 +29,18 @@ Enemigo::Enemigo(qreal w,
     changeDirectionTime = 2000;
     canJump = true;
 
+    // *** NUEVO: Configurar sistema de disparo (desde la rama de merge) ***
+    tiempoEntreDisparos = 2000; // Dispara cada 2 segundos
+    timerDisparo = new QTimer(this);
+    connect(timerDisparo, &QTimer::timeout, this, &Enemigo::intentarDisparar);
+
+    // Iniciar disparos después de medio segundo, solo si es Nivel 1
+    QTimer::singleShot(500, this, [this]() {
+        if (estaVivo() && numeroNivel == 1) {
+            timerDisparo->start(tiempoEntreDisparos);
+        }
+    });
+
     aiTimer = new QTimer(this);
     connect(aiTimer, &QTimer::timeout, this, &Enemigo::changeDirection);
 
@@ -38,11 +51,11 @@ Enemigo::Enemigo(qreal w,
         leftPressed = false;
         rightPressed = false;
         downPressed = true;  // Siempre moviéndose hacia abajo
-        // CORRECCIÓN 1: Velocidad ligeramente menor
-        speed = 5.0;
+
+        speed = 5.0; // Velocidad ligeramente menor (de HEAD)
 
         // *** CRÍTICO: Configurar vida baja para nivel 1 ***
-        setVida(3);  // Mueren con 1 hit
+        setVida(3);
 
         qDebug() << "Enemigo Nivel 1 creado en pos:" << x() << y()
                  << "con speed:" << speed
@@ -53,17 +66,47 @@ Enemigo::Enemigo(qreal w,
     {
         // *** NIVEL 2+: Modo inactivo hasta activar persecución ***
         speed = 0;
-        setVida(500);  // Más vida para niveles avanzados
+        setVida(500);
         aiTimer->start(changeDirectionTime);
         qDebug() << "Enemigo creado en modo inactivo con vida:" << getVida();
     }
 }
 
 /*
-  Carga de sprites para niveles que los necesitan (nivel 2)
+ Carga de sprites para niveles que los necesitan (nivel 2)
 */
-// En enemigo.cpp - Reemplazar el método cambiarSpritePorEstado()
+void Enemigo::cargarSprites()
+{
+    qDebug() << "Cargando sprites enemigo";
 
+    QString rutaIdle  = ":/Recursos/Sprites/Soldier_Idle.png";
+    QString rutaRun   = ":/Recursos/Sprites/Run_soldier.png";
+    QString rutaJump  = ":/Recursos/Sprites/Run_soldier.png";
+    QString rutaDeath = ":/Recursos/Sprites/Attacck.png";
+
+    spriteIdle    = QPixmap(rutaIdle);
+    spriteCorrer = QPixmap(rutaRun);
+    spriteSaltar = QPixmap(rutaJump);
+    spriteMuerte = QPixmap(rutaDeath);
+
+    if (spriteIdle.isNull()) spriteIdle = spriteCorrer;
+    if (spriteSaltar.isNull()) spriteSaltar = spriteCorrer;
+    if (spriteMuerte.isNull()) spriteMuerte = spriteCorrer;
+
+    // *** Se mantiene la configuración de sprite de HEAD (más controlada para IDLE) ***
+    setSprite(rutaIdle, 128, 128, 1);
+    estadoActual = EstadoAnimacion::IDLE;
+    frameActual = 0;
+
+    // Forzar que spriteSheet apunte al correcto
+    spriteSheet = spriteIdle;
+    totalFrames = 1;
+}
+
+/*
+ Lógica para cambiar el sprite basado en el estado de animación
+ Se utiliza la versión con correcciones de HEAD.
+*/
 void Enemigo::cambiarSpritePorEstado()
 {
     EstadoAnimacion estado = getEstadoAnimacion();
@@ -108,61 +151,6 @@ void Enemigo::cambiarSpritePorEstado()
 }
 
 
-// *** CORRECCIÓN ADICIONAL EN actualizarAnimacion() de persona.cpp ***
-// Reemplazar el método actualizarAnimacion() en persona.cpp:
-void Persona::actualizarAnimacion()
-{
-    if (!usarSprites || animacionPausada) return;
-
-    // *** CORRECCIÓN CRÍTICA: Si solo hay 1 frame, NO avanzar ***
-    if (totalFrames <= 1) {
-        // Para estados IDLE con 1 frame, no hacer nada
-        return;
-    }
-
-    int framePrevio = frameActual;
-    frameActual++;
-    if (frameActual >= totalFrames) {
-        frameActual = 0;
-    }
-
-    // *** CORRECCIÓN: Solo repintar si el frame cambió ***
-    if (frameActual != framePrevio) {
-        update(boundingRect());
-    }
-}
-
-// *** AJUSTE EN cargarSprites() de enemigo.cpp ***
-// Asegurar que el estado inicial sea correcto:
-
-void Enemigo::cargarSprites()
-{
-    qDebug() << "Cargando sprites enemigo";
-
-    QString rutaIdle  = ":/Recursos/Sprites/Soldier_Idle.png";
-    QString rutaRun   = ":/Recursos/Sprites/Run_soldier.png";
-    QString rutaJump  = ":/Recursos/Sprites/Run_soldier.png";
-    QString rutaDeath = ":/Recursos/Sprites/Attacck.png";
-
-    spriteIdle    = QPixmap(rutaIdle);
-    spriteCorrer = QPixmap(rutaRun);
-    spriteSaltar = QPixmap(rutaJump);
-    spriteMuerte = QPixmap(rutaDeath);
-
-    if (spriteIdle.isNull()) spriteIdle = spriteCorrer;
-    if (spriteSaltar.isNull()) spriteSaltar = spriteCorrer;
-    if (spriteMuerte.isNull()) spriteMuerte = spriteCorrer;
-
-    // *** CORRECCIÓN: Establecer sprite con 1 frame para IDLE ***
-    setSprite(rutaIdle, 128, 128, 1);
-    estadoActual = EstadoAnimacion::IDLE;
-    frameActual = 0;
-
-    // *** NUEVO: Forzar que spriteSheet apunte al correcto ***
-    spriteSheet = spriteIdle;
-    totalFrames = 1;
-}
-
 void Enemigo::onEstadoAnimacionCambiado()
 {
     cambiarSpritePorEstado();
@@ -179,7 +167,7 @@ void Enemigo::activarAnimacionMuerte()
 }
 
 /*
-  Activar IA de persecucion (solo nivel 2+)
+ Activar IA de persecucion (solo nivel 2+)
 */
 void Enemigo::activarPersecucion()
 {
@@ -188,7 +176,7 @@ void Enemigo::activarPersecucion()
     if (!enemigoActivo)
     {
         enemigoActivo = true;
-        // CORRECCIÓN 4: Velocidad ligeramente menor
+        // Se mantiene la velocidad ajustada de HEAD, que es más baja
         speed = 4.46;
 
         if (onGround)
@@ -200,14 +188,13 @@ void Enemigo::activarPersecucion()
 }
 
 /*
-  IA principal de movimiento - SOBRESCRIBE handleInput de Persona
+ IA principal de movimiento - SOBRESCRIBE handleInput de Persona
 */
 void Enemigo::handleInput()
 {
     if (numeroNivel == 1)
     {
         // *** NIVEL 1: Asegurar que siempre está bajando ***
-        // Las direcciones ya están configuradas, solo aseguramos que no cambien
         downPressed = true;
         upPressed = false;
         leftPressed = false;
@@ -269,7 +256,7 @@ void Enemigo::changeDirection()
 }
 
 /*
-  IA de movimiento aleatorio (solo para nivel 2+)
+ IA de movimiento aleatorio (solo para nivel 2+)
 */
 void Enemigo::randomizeDirection()
 {
@@ -300,7 +287,7 @@ void Enemigo::randomizeDirection()
 }
 
 /*
-  Saltar si hay obstaculo adelante (solo nivel 2+)
+ Saltar si hay obstaculo adelante (solo nivel 2+)
 */
 void Enemigo::tryJumpIfObstacleAhead()
 {
@@ -315,7 +302,7 @@ void Enemigo::tryJumpIfObstacleAhead()
 }
 
 /*
-  Deteccion de obstaculo justo adelante
+ Deteccion de obstaculo justo adelante
 */
 bool Enemigo::detectarObstaculoAdelante()
 {
@@ -350,5 +337,47 @@ void Enemigo::tryJump()
     {
         vy = -10;
         onGround = false;
+    }
+}
+
+// *** Lógica de disparo (desde la rama de merge) ***
+void Enemigo::intentarDisparar()
+{
+    if (!scene() || !estaVivo()) {
+        if (timerDisparo) {
+            timerDisparo->stop();
+        }
+        return;
+    }
+
+    // Solo disparar en nivel 1
+    if (numeroNivel == 1) {
+        dispararProyectil();
+    }
+}
+
+void Enemigo::dispararProyectil()
+{
+    if (!scene()) return;
+
+    qreal projW = 10;
+    qreal projH = 16;
+    qreal projSpeed = 8.0;
+    int dirY = 1; // *** HACIA ABAJO ***
+
+    Proyectil* bala = new Proyectil(projW, projH, projSpeed, dirY);
+    bala->setOwner(this);
+
+    // Spawn en la parte inferior del enemigo
+    QRectF br = boundingRect();
+    QPointF spawn = scenePos() + QPointF(br.width() / 2 - projW / 2, br.bottom());
+
+    bala->setPos(spawn);
+    scene()->addItem(bala);
+
+    // Debug cada cierto tiempo
+    static int disparoCounter = 0;
+    if (disparoCounter++ % 5 == 0) {
+        qDebug() << "Enemigo disparó en:" << spawn;
     }
 }

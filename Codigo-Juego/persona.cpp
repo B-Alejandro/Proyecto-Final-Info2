@@ -5,11 +5,11 @@
 #include <QGraphicsScene>
 
 /*
-  Persona.cpp corregido
-  - Restaura el timer interno de movimiento para compatibilidad con Nivel1
-  - Mantiene el sistema de vida mejorado con invulnerabilidad
-  - boundingRect declarado en header y definido aqui
-  - paint dibuja sin escalado para evitar parpadeo
+ Persona.cpp corregido
+ - Restaura el timer interno de movimiento para compatibilidad con Nivel1
+ - Mantiene el sistema de vida mejorado con invulnerabilidad
+ - boundingRect declarado en header y definido aqui
+ - paint dibuja sin escalado para evitar parpadeo
 */
 
 /* Constructor: inicializacion en el mismo orden que los miembros en persona.h */
@@ -76,11 +76,23 @@ QRectF Persona::boundingRect() const
 }
 
 /* recibir danio: aplica invulnerabilidad corta */
-// persona.cpp
-
 void Persona::recibirDanio(int cantidad)
 {
-    // ... (código anterior)
+    if (!estaVivo()) return;
+
+    // si ya esta invulnerable, ignorar
+    if (invulnerable) return;
+
+    vidaActual -= cantidad;
+    if (vidaActual < 0) vidaActual = 0;
+
+    qDebug() << "Persona recibió daño:" << cantidad << "Vida restante:" << vidaActual;
+
+    emit vidaCambiada(vidaActual, vidaMaxima);
+
+    // invulnerabilidad corta para evitar daños frames contiguos
+    invulnerable = true;
+    timerInvulnerabilidad->start(200);
 
     if (vidaActual <= 0) {
         qDebug() << "Persona murió, activando secuencia de Game Over";
@@ -91,10 +103,12 @@ void Persona::recibirDanio(int cantidad)
         if (timerAnimacion) timerAnimacion->stop();
 
         emit murioPersona();
-        emit died(this);
+        emit died(this); // Para compatibilidad con nivel 1
 
-        // ❌ COMENTAR/ELIMINAR ESTAS LÍNEAS.
-        //    Dejar que Nivel2 complete la secuencia de 'Game Over' (QTimer::singleShot).
+        // *** CORRECCIÓN: NO ELIMINAR AQUI ***
+        // Dejar que NivelBase complete la secuencia de 'Game Over' (QTimer::singleShot)
+        // para dar tiempo a que se ejecute la animación de muerte.
+        // Las siguientes líneas deben ser ELIMINADAS/COMENTADAS
         /*
         if (scene()) {
             scene()->removeItem(this);
@@ -159,7 +173,7 @@ void Persona::reanudarAnimacion()
 {
     animacionPausada = false;
     if (timerAnimacion) timerAnimacion->start(60);
-    if (timer) timer->start(16);  // También reanudar movimiento
+    if (timer) timer->start(16); // También reanudar movimiento
 }
 
 void Persona::handleInput()
@@ -236,9 +250,16 @@ void Persona::setAnimacion(EstadoAnimacion estado)
         onEstadoAnimacionCambiado();
     }
 }
-// Archivo: persona.cpp
 
+void Persona::actualizarAnimacion()
+{
+    if (!usarSprites || animacionPausada) return;
 
+    frameActual++;
+    if (frameActual >= totalFrames) frameActual = 0;
+
+    update(); // solicita repaint
+}
 
 void Persona::setTipoMovimiento(TipoMovimiento tipo)
 {
@@ -253,30 +274,25 @@ void Persona::paint(QPainter* painter, const QStyleOptionGraphicsItem*, QWidget*
         int srcX = frameActual * anchoSprite;
         int srcY = 0;
 
-        // Coordenadas de dibujo (destino)
-        qreal destX = 0;
-        qreal destY = 0;
-        qreal destW = anchoSprite;
-        qreal destH = altoSprite;
-
         if (mirandoIzquierda) {
-            // Ajustar el ancho a negativo para hacer el flip
-            // y mover la posicion X a la derecha (al ancho del sprite)
-            // para que el flip se vea en la posicion correcta.
-            destX = anchoSprite;
-            destW = -anchoSprite;
+            painter->save();
+            painter->translate(anchoSprite / 2.0, altoSprite / 2.0);
+            painter->scale(-1, 1);
+            painter->translate(-anchoSprite / 2.0, -altoSprite / 2.0);
         }
 
-        // Dibuja el frame directamente usando el ancho y posición (potencialmente negativos)
-        painter->drawPixmap(QRectF(destX, destY, destW, destH), // Destino
-                            spriteSheet,
-                            QRectF(srcX, srcY, anchoSprite, altoSprite)); // Origen
+        painter->drawPixmap(0, 0, spriteSheet,
+                            srcX, srcY,
+                            anchoSprite, altoSprite);
 
-        // ... (Efecto visual de invulnerabilidad) ...
+        if (mirandoIzquierda) painter->restore();
 
+        // Efecto visual de invulnerabilidad
+        if (invulnerable) {
+            painter->fillRect(0, 0, anchoSprite, altoSprite, QColor(255, 255, 255, 120));
+        }
 
     } else {
-        // ... (Dibujo de rectangulo si no hay sprite) ...
         painter->setBrush(brush());
         painter->setPen(pen());
         painter->drawRect(rect());
