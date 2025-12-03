@@ -2,58 +2,88 @@
 #define NIVEL2_H
 
 #include "nivelbase.h"
-#include "enemigo.h"
-#include "obstaculo.h"
-#include "GameOverScreen.h"
+#include <QList>
+#include <QTimer>
+#include <QElapsedTimer>
 #include <QGraphicsPixmapItem>
 
-/*
-  Clase Nivel2
-  - Implementa la logica del nivel 2
-  - Maneja fondo dinamico, enemigos, obstaculos y la pantalla de Game Over
-*/
+// Declaraciones adelantadas
+class Juego;
+class Enemigo;
+class Obstaculo;
+class GameOverScreen;
+class QWidget;
+class QLabel;
 
 class Nivel2 : public NivelBase
 {
     Q_OBJECT
-public:
-    explicit Nivel2(Juego* juego, QObject* parent = nullptr);
-    ~Nivel2();
 
+public:
+    Nivel2(Juego* juego, QObject* parent = nullptr);
+    ~Nivel2() override;
+
+    // --- CORRECCIÓN 1: Acceso público desde juego.cpp ---
+    void manejarTecla(Qt::Key key) ;
+    bool estaEnGameOver() const; // <-- CORRECCIÓN 2: Nuevo método de estado
+
+protected:
     void configurarNivel() override;
     void crearEnemigos() override;
     void crearObstaculos() override;
     void actualizar() override;
-
-    // Manejo de teclas cuando se esta en estado Game Over (juego en pausa)
-    void manejarTecla(Qt::Key key);
-
-    bool estaEnGameOver() const { return juegoEnPausa; }
+    // (manejarTecla se movió)
 
 signals:
+    // --- CORRECCIÓN 3: Declarar la señal faltante ---
     void juegoTerminado();
 
 private slots:
     void onJuegoTerminado();
 
 private:
-    // Metodo para crear el fondo dinamico y actualizarlo
+    // --- Gestión de Corredor Infinito Triple (Métodos auxiliares) ---
     void crearFondoDinamico();
-    void actualizarFondo(qreal posicionCamara);
+    void actualizarFondo(qreal posicionJugador);
+    void crearSueloTriple();
+    void actualizarSuelo(qreal posicionJugador);
+    void spawnearObstaculoAleatorio();
+    void limpiarObstaculosLejanos();
+    void reposicionarEscena();
+
+    // ================================================================
+    // ** MIEMBROS REORDENADOS para evitar -Wreorder **
+    // ================================================================
 
     Enemigo* enemigoAtras;
-    Obstaculo* suelo;
+    Obstaculo* suelo1;
+    Obstaculo* suelo2;
+    Obstaculo* suelo3;
     GameOverScreen* pantallaGameOver;
     bool juegoEnPausa;
 
-    // Dimensiones de la vista
+    QGraphicsPixmapItem* fondo1;
+    QGraphicsPixmapItem* fondo2;
+    QGraphicsPixmapItem* fondo3;
+
+    int anchoFondo;
+    int anchoSuelo;
     int vistaAncho;
     int vistaAlto;
 
-    // Fondo dinamico
-    QGraphicsPixmapItem* fondo1;
-    QGraphicsPixmapItem* fondo2;
-    qreal anchoFondo;
+    qreal distanciaEntreObstaculos;
+    qreal ultimaPosicionSpawn;
+    int contadorObstaculos;
+
+    QElapsedTimer tiempoJugado;
+    QElapsedTimer danoObstaculoTimer;
+
+    QList<Obstaculo*> obstaculos;
+
+    QWidget* hudWidget;
+    QLabel* vidaLabel;
+    QLabel* tiempoLabel;
+    QLabel* scoreLabel;
 };
 
 #endif // NIVEL2_H

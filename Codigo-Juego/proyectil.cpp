@@ -1,6 +1,6 @@
 #include "proyectil.h"
 #include "persona.h"
-#include "obstaculo.h"  // *** NUEVO ***
+#include "obstaculo.h"  // Se mantiene la inclusión de Obstaculo
 #include <QPainter>
 #include <QGraphicsScene>
 
@@ -21,6 +21,7 @@ Proyectil::Proyectil(qreal width, qreal height,
 
 QRectF Proyectil::boundingRect() const
 {
+    // Se mantiene el centrado, típico en QGraphicsObject
     return QRectF(-m_w/2.0, -m_h/2.0, m_w, m_h);
 }
 
@@ -42,6 +43,7 @@ void Proyectil::advance(int phase)
 {
     if (!phase) return;
 
+    // Mover
     moveBy(0, m_speed * m_dirY);
 
     // Colisiones
@@ -51,23 +53,18 @@ void Proyectil::advance(int phase)
         if (p) {
             if (p == m_owner) continue;
 
-            // Aplicar daño según quién disparó
-            if (m_dirY < 0) {
-                // Proyectil hacia arriba = del jugador
-                p->recibirDanio(1);
-            } else {
-                // Proyectil hacia abajo = de enemigo
-                p->recibirDanio(1);  // *** Cambiado a 1 vida ***
-            }
+            // Lógica unificada para aplicar daño a cualquier persona
+            p->recibirDanio(1);
 
             if (scene()) scene()->removeItem(this);
             deleteLater();
             return;
         }
 
-        // *** NUEVO: Daño a obstáculos móviles ***
+        // *** Daño a obstáculos móviles (mantenido de la versión completa) ***
         Obstaculo* obs = dynamic_cast<Obstaculo*>(it);
-        if (obs && obs->isMovil() && m_dirY < 0) {  // Solo proyectiles del jugador
+        // Solo daña si es móvil Y si el proyectil es del jugador (hacia arriba)
+        if (obs && obs->isMovil() && m_dirY < 0) {
             obs->recibirDanio(1);
 
             if (scene()) scene()->removeItem(this);

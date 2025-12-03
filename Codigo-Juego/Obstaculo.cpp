@@ -1,4 +1,3 @@
-// ============ obstaculo.cpp ============
 #include "obstaculo.h"
 #include <QBrush>
 #include <QPen>
@@ -7,6 +6,14 @@
 #include <QWidget>
 #include <QDebug>
 
+/*
+ Constructor general
+ Parametros:
+ x, y      posicion inicial
+ w, h      dimensiones
+ color     color base del obstaculo
+ esMovil   indica si el obstaculo se mueve hacia abajo
+*/
 Obstaculo::Obstaculo(qreal x,
                      qreal y,
                      qreal w,
@@ -28,6 +35,9 @@ Obstaculo::Obstaculo(qreal x,
     setPen(QPen(Qt::NoPen));
 }
 
+/*
+ Cambia el color del obstaculo
+*/
 void Obstaculo::setColor(const QColor& color)
 {
     currentColor = color;
@@ -35,19 +45,25 @@ void Obstaculo::setColor(const QColor& color)
     tieneTextura = false;
 }
 
+/*
+ Configura color del borde
+*/
 void Obstaculo::setBorderColor(const QColor& color, int width)
 {
-    QPen pen(color);
-    pen.setWidth(width);
-    setPen(pen);
+    QPen p(color);
+    p.setWidth(width);
+    setPen(p);
 }
 
+/*
+ Activa textura a partir de archivo
+*/
 void Obstaculo::setTextura(const QString& rutaImagen, bool repetir)
 {
     QPixmap pixmap(rutaImagen);
 
     if (pixmap.isNull()) {
-        qDebug() << "⚠️ No se pudo cargar la textura:" << rutaImagen;
+        qDebug() << "No se pudo cargar la textura:" << rutaImagen;
         tieneTextura = false;
         return;
     }
@@ -55,14 +71,22 @@ void Obstaculo::setTextura(const QString& rutaImagen, bool repetir)
     setTextura(pixmap, repetir);
 }
 
+/*
+ Activa textura a partir de un pixmap
+*/
 void Obstaculo::setTextura(const QPixmap& pixmap, bool repetir)
 {
     texturaPixmap = pixmap;
     repetirTextura = repetir;
     tieneTextura = true;
+
+    setBrush(Qt::NoBrush);
     update();
 }
 
+/*
+ Elimina la textura y restaura el color base
+*/
 void Obstaculo::limpiarTextura()
 {
     tieneTextura = false;
@@ -71,6 +95,9 @@ void Obstaculo::limpiarTextura()
     update();
 }
 
+/*
+ Recibe dano, reduce vida y emite senal si muere
+*/
 void Obstaculo::recibirDanio(int cantidad)
 {
     if (!estaVivo()) return;
@@ -78,33 +105,40 @@ void Obstaculo::recibirDanio(int cantidad)
     vidaActual -= cantidad;
     if (vidaActual < 0) vidaActual = 0;
 
-    qDebug() << "Obstáculo recibió daño:" << cantidad << "Vida restante:" << vidaActual;
+    qDebug() << "Obstaculo recibio danio:" << cantidad << "Vida restante:" << vidaActual;
 
     if (vidaActual <= 0) {
-        qDebug() << "Obstáculo destruido";
+        qDebug() << "Obstaculo destruido";
         emit obstaculoMuerto(this);
     }
 }
 
+/*
+ Actualiza movimiento si es un obstaculo movil
+*/
 void Obstaculo::actualizar(qreal sceneH)
 {
+    Q_UNUSED(sceneH);
+
     if (!esMovil) return;
 
-    // Mover hacia abajo
     setY(y() + velocidad);
-
-    // Si sale de la pantalla, será eliminado por el nivel
 }
 
-void Obstaculo::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+/*
+ Dibujo del obstaculo, con o sin textura
+*/
+void Obstaculo::paint(QPainter *painter,
+                      const QStyleOptionGraphicsItem *option,
+                      QWidget *widget)
 {
     Q_UNUSED(option);
     Q_UNUSED(widget);
 
+    QRectF rect = this->rect();
+
     if (tieneTextura && !texturaPixmap.isNull()) {
         painter->save();
-
-        QRectF rect = this->rect();
 
         if (repetirTextura) {
             QBrush texturaBrush(texturaPixmap);

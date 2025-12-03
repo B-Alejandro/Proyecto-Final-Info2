@@ -1,3 +1,4 @@
+// ============ nivel1.cpp (Corregido) ============
 #include "nivel1.h"
 #include "juego.h"
 #include "jugador.h"
@@ -10,6 +11,7 @@
 #include "hudnivel1.h"
 #include "victoriascreen.h"
 #include <QRandomGenerator>
+#include <QDebug> // Incluido para asegurar que qDebug funcione
 
 Nivel1::Nivel1(Juego* juego, QObject* parent)
     : NivelBase(juego, 1, parent)
@@ -51,6 +53,11 @@ void Nivel1::configurarNivel()
     connect(jugador, &Persona::vidaCambiada, this, &Nivel1::onJugadorDaniado);
 
     escena->addItem(jugador);
+
+    // ** CORRECCIÓN 1: Configurar foco para el jugador **
+    jugador->setFlag(QGraphicsItem::ItemIsFocusable);
+    jugador->setFocus();
+    // ---------------------------------------------------
 
     // Crear HUD
     if (escena) {
@@ -125,7 +132,6 @@ void Nivel1::spawnearOleada()
                 listaEnemigos.append(e1);
                 escena->addItem(e1);
                 connect(e1, &Persona::died, this, &Nivel1::onEnemyDied);
-
             }
         }
     }
@@ -347,7 +353,10 @@ void Nivel1::cleanupOffscreen()
         qreal ey = e->scenePos().y();
 
         if (ey > sceneH - cleanupMargin) {
+            qDebug() << "Enemigo fuera de pantalla en y:" << ey << "sceneH:" << sceneH;
+
             listaEnemigos.removeOne(e);
+            enemigos.removeOne(e);
             escena->removeItem(e);
             e->deleteLater();
             removidos = true;
@@ -429,6 +438,7 @@ void Nivel1::colisionDetectada(Enemigo* e)
     jugador->recibirDanio(1);  // 1 vida
 
     listaEnemigos.removeOne(e);
+    enemigos.removeOne(e);
     escena->removeItem(e);
     e->deleteLater();
 }
@@ -457,6 +467,7 @@ void Nivel1::colisionObstaculoDetectada(Obstaculo* obs)
 
 void Nivel1::crearObstaculos()
 {
+    // Sin suelo visible en este nivel
     int sueloAltura = 0;
     Obstaculo* suelo = new Obstaculo(0, sceneH - sueloAltura, sceneW, sueloAltura,
                                      QColor(139, 69, 19), false);
@@ -564,6 +575,7 @@ void Nivel1::onJugadorMurio()
 
 void Nivel1::manejarTecla(Qt::Key key)
 {
+    // Ahora, manejarTecla() solo se llama si juegoEnPausa es true (Game Over o Victoria)
     if (!juegoEnPausa) return;
 
     if (key == Qt::Key_R) {
@@ -611,7 +623,11 @@ void Nivel1::manejarTecla(Qt::Key key)
         connect(jugador, &Persona::vidaCambiada, this, &Nivel1::onJugadorDaniado);
 
         escena->addItem(jugador);
+
+        // ** CORRECCIÓN 2: Asegurar foco después del reinicio **
+        jugador->setFlag(QGraphicsItem::ItemIsFocusable);
         jugador->setFocus();
+        // ----------------------------------------------------
 
         // Actualizar HUD
         if (hud) {

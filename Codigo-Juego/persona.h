@@ -6,11 +6,12 @@
 #include <QKeyEvent>
 #include <QPixmap>
 #include <QRectF>
+#include <QObject> // Asegurar que QObject está incluido
 
 /*
-  Persona.h
-  Clase base para entidades con movimiento, fisica y animacion por sprites.
-  Esta version declara boundingRect() para evitar warnings y errores de definicion fuera de linea.
+ Persona.h
+ Clase base para entidades con movimiento, fisica y animacion por sprites.
+ Esta version declara boundingRect() para evitar warnings y errores de definicion fuera de linea.
 */
 
 enum class TipoMovimiento {
@@ -31,6 +32,8 @@ class Persona : public QObject, public QGraphicsRectItem
 
 public:
     void updateMovement();
+
+    // Sobrescribe boundingRect para que Qt use el tamaño del sprite
     QRectF boundingRect() const override;
 
     Persona(qreal w, qreal h, qreal sceneWidth, qreal sceneHeight, TipoMovimiento tipo);
@@ -82,8 +85,7 @@ signals:
     void died(Persona* who);
 
 protected:
-    // override para que Qt conozca el tamano real del item
-    // renderizado sin escalado
+    // paint renderiza el sprite
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget) override;
 
     // metodos de control
@@ -92,7 +94,7 @@ protected:
     void updateMovementConGravedad();
     virtual void onEstadoAnimacionCambiado();
 
-    // parametros principales (orden pensado para evitar warnings de inicializacion)
+    // parametros principales
     TipoMovimiento tipoMovimiento;
     double sceneW;
     double sceneH;

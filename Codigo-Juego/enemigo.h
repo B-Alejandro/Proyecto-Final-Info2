@@ -7,9 +7,8 @@
 
 /*
   Clase Enemigo
-  Representa un enemigo controlado por IA simple.
-  Posee sprites para diferentes estados y puede activarse
-  o iniciar persecucion cuando el jugador se mueve.
+  Representa un enemigo controlado por IA simple o avanzada.
+  Incluye movimiento, sprites y sistema opcional de disparo.
 */
 
 class Enemigo : public Persona
@@ -18,11 +17,11 @@ class Enemigo : public Persona
 
 public:
     /*
-      Constructor
-      w,h: dimensiones del enemigo
-      sceneWidth, sceneHeight: dimensiones del escenario
-      tipo: tipo de movimiento (con gravedad o rectilineo)
-      nivel: numero de nivel para ajustar la IA
+      Constructor general del enemigo
+      w, h: dimensiones
+      sceneWidth, sceneHeight: tamano del escenario
+      tipo: tipo de movimiento (gravedad o rectilineo)
+      nivel: nivel del juego que ajusta la IA
     */
     Enemigo(qreal w,
             qreal h,
@@ -32,48 +31,46 @@ public:
             int nivel);
 
     /*
-      Carga todos los sprites del enemigo y calcula sus frames.
-      NOTA: Este método se llama "cargarSprites" (sin "nivel2")
+      Carga sprites del enemigo y calcula frames.
     */
     void cargarSprites();
 
     /*
-      Activa animacion de muerte y detiene el movimiento.
+      Activa animacion de muerte y detiene movimiento.
     */
     void activarAnimacionMuerte();
 
     /*
-      Activa la persecucion hacia el jugador.
-      Se activa solo cuando el jugador se mueve.
+      Activa persecucion hacia el jugador cuando este se mueve.
     */
     void activarPersecucion();
 
     /*
-      Devuelve true si el enemigo esta activo.
+      Indica si el enemigo esta activo.
     */
     bool estaActivo() const { return enemigoActivo; }
 
 protected:
     /*
-      Maneja la logica interna cuando el enemigo tiene gravedad.
-      Aqui se evalua si debe saltar o no ante un obstaculo.
+      Logica interna cuando el enemigo usa gravedad.
+      Decide si debe saltar al acercarse a un obstaculo.
     */
     void handleInput() override;
 
     /*
-      Sobrescribe el metodo base para actualizar el sprite
-      segun el nuevo estado de animacion.
+      Actualiza sprite segun el estado de animacion.
     */
     void onEstadoAnimacionCambiado() override;
 
 private slots:
     /*
       Cambia la direccion del enemigo segun IA.
-      Solo aplica cuando esta activo.
     */
     void changeDirection();
 
-    // *** NUEVO: Slot para intentar disparar ***
+    /*
+      Intenta disparar un proyectil segun su temporizador.
+    */
     void intentarDisparar();
 
 private:
@@ -89,22 +86,22 @@ private:
     // Tiempo entre cambios de direccion
     int changeDirectionTime;
 
-    // Indica si puede saltar
+    // Habilidad para saltar
     bool canJump;
 
     // Numero de nivel
     int numeroNivel;
 
-    // Controla si el enemigo esta activo
+    // Estado activo o inactivo del enemigo
     bool enemigoActivo;
 
-    // Sprites de cada estado
+    // Sprites
     QPixmap spriteIdle;
     QPixmap spriteCorrer;
     QPixmap spriteSaltar;
     QPixmap spriteMuerte;
 
-    // *** NUEVO: Sistema de disparo ***
+    // Sistema de disparo
     QTimer* timerDisparo;
     int tiempoEntreDisparos;
     void dispararProyectil();

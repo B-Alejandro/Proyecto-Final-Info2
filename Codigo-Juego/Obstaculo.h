@@ -25,7 +25,7 @@ public:
               qreal w,
               qreal h,
               QColor color,
-              bool esMovil = false);  // *** NUEVO: Constructor con flag móvil ***
+              bool esMovil = false); // Constructor unificado con flag móvil
 
     void setColor(const QColor& color);
     void setBorderColor(const QColor& color, int width);
@@ -36,9 +36,9 @@ public:
     // Métodos para agregar textura/imagen
     void setTextura(const QString& rutaImagen, bool repetir = true);
     void setTextura(const QPixmap& pixmap, bool repetir = true);
-    void limpiarTextura();
+    void limpiarTextura(); // Volver a usar solo color
 
-    // *** NUEVO: Sistema de vida y movimiento ***
+    // *** Sistema de vida y movimiento ***
     void setMovil(bool movil) { esMovil = movil; }
     bool isMovil() const { return esMovil; }
 
@@ -57,9 +57,11 @@ public:
     void actualizar(qreal sceneH);
 
 signals:
+    // REVERTIDO: Vuelve a usar Obstaculo* para que coincida con el slot en nivel1.cpp
     void obstaculoMuerto(Obstaculo* obs);
 
 protected:
+    // Sobrescribir paint para dibujar la textura
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
 
 private:
@@ -68,12 +70,12 @@ private:
     QPixmap texturaPixmap;
     bool repetirTextura;
 
-    // *** NUEVO: Atributos de obstáculo móvil ***
+    // Atributos de obstáculo móvil, vida y daño (unificados)
     bool esMovil;
-    int vidaActual;
-    int vidaMaxima;
-    qreal velocidad;
-    int danioAlJugador;
+    int vidaActual = 0;
+    int vidaMaxima = 0;
+    qreal velocidad = 0;
+    int danioAlJugador = 0;
 };
 
 #endif // OBSTACULO_H
