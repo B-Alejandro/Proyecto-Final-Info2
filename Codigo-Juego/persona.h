@@ -55,6 +55,7 @@ public:
     void curar(int cantidad);
     bool estaVivo() const { return vidaActual > 0; }
     bool estaInvulnerable() const { return invulnerable; }
+    void iniciarInvulnerabilidad(int duration_ms);
 
     // manejo de sprites
     void setSprite(const QString& rutaImagen, int anchoFrame, int altoFrame, int numFrames);

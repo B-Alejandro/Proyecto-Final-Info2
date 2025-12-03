@@ -1,7 +1,7 @@
 #include "enemigo.h"
 #include "obstaculo.h"
 #include "jugador.h"
-#include "proyectil.h" // Se mantiene el include de proyectil
+#include "proyectil.h"
 #include <QBrush>
 #include <QRandomGenerator>
 #include <QGraphicsScene>
@@ -24,7 +24,8 @@ Enemigo::Enemigo(qreal w,
     , numeroNivel(nivel)
     , enemigoActivo(false)
 {
-    setBrush(QBrush(Qt::red));
+    // CORRECCIÓN FLICKERING 1: Se eliminó setBrush(QBrush(Qt::red));
+    setPen(QPen(Qt::NoPen)); // Asegura que no haya borde.
 
     changeDirectionTime = 2000;
     canJump = true;
@@ -84,7 +85,7 @@ void Enemigo::cargarSprites()
     QString rutaJump  = ":/Recursos/Sprites/Run_soldier.png";
     QString rutaDeath = ":/Recursos/Sprites/Attacck.png";
 
-    spriteIdle    = QPixmap(rutaIdle);
+    spriteIdle     = QPixmap(rutaIdle);
     spriteCorrer = QPixmap(rutaRun);
     spriteSaltar = QPixmap(rutaJump);
     spriteMuerte = QPixmap(rutaDeath);
@@ -101,6 +102,9 @@ void Enemigo::cargarSprites()
     // Forzar que spriteSheet apunte al correcto
     spriteSheet = spriteIdle;
     totalFrames = 1;
+
+    // CORRECCIÓN FLICKERING 2: FORZAR BROCHA TRANSPARENTE
+    setBrush(Qt::transparent);
 }
 
 /*
@@ -145,8 +149,7 @@ void Enemigo::cambiarSpritePorEstado()
     totalFrames = nuevosFrames;
     frameActual = 0; // Reset frame solo cuando cambia el sprite
 
-    // *** CORRECCIÓN: Solo forzar update si realmente cambió algo ***
-    prepareGeometryChange();
+    // CORRECCIÓN FINAL FLICKERING: Solo llamar a update(), sin prepareGeometryChange().
     update(boundingRect());
 }
 

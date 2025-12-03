@@ -76,7 +76,7 @@ void Juego::iniciar()
 {
     if (!niveles.isEmpty())
     {
-        cambiarNivel(0);
+        cambiarNivel(1);
     }
 
     timer->start(16);
