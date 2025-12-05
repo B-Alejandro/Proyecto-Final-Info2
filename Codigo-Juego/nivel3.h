@@ -15,6 +15,8 @@ protected:
     void configurarNivel() override;
     void crearEnemigos() override;
     void crearObstaculos() override;
+
+    void actualizar() override;
 };
 
 #endif // NIVEL3_H

@@ -7,6 +7,7 @@ CONFIG += qt
 SOURCES += \
     Obstaculo.cpp \
     enemigo.cpp \
+    enemigointeligente.cpp \
     explosion.cpp \
     fisica.cpp \
     gameoverscreen.cpp \
@@ -27,6 +28,7 @@ SOURCES += \
 HEADERS += \
     Obstaculo.h \
     enemigo.h \
+    enemigointeligente.h \
     explosion.h \
     fisica.h \
     gameoverscreen.h \
