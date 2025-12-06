@@ -1,6 +1,6 @@
 #include "enemigoInteligente.h"
 #include "jugador.h"
-#include "proyectil.h"
+#include "proyectilInteligente.h"  // *** CAMBIADO ***
 #include <QGraphicsScene>
 #include <QDebug>
 #include <cmath>
@@ -28,8 +28,19 @@ EnemigoInteligente::EnemigoInteligente(qreal w,
     , areaDeteccionVisual(nullptr)
     , mostrarArea(false)
 {
-    // Guardar velocidad original
-    velocidadOriginal = speed;
+    // Guardar velocidad original (debe ser 0 para estático)
+    velocidadOriginal = 0;
+    speed = 0;
+
+    // *** CRÍTICO: Configurar para que NO use la lógica de Enemigo base ***
+    // Marcar como NO activo para que no use handleInput() de Enemigo
+    // (Enemigo tiene una variable enemigoActivo que controla esto)
+
+    // *** IMPORTANTE: Detener comportamiento aleatorio del padre ***
+    upPressed = false;
+    downPressed = false;
+    leftPressed = false;
+    rightPressed = false;
 
     // Crear el área visual de detección (invisible por defecto)
     areaDeteccionVisual = new QGraphicsEllipseItem(
@@ -51,6 +62,7 @@ EnemigoInteligente::EnemigoInteligente(qreal w,
     connect(timerDisparo, &QTimer::timeout, this, &EnemigoInteligente::dispararAObjetivo);
 
     qDebug() << "EnemigoInteligente creado con radio:" << radioDeteccion;
+    qDebug() << "  Velocidad inicial:" << speed << "(estático)";
 }
 
 EnemigoInteligente::~EnemigoInteligente()
@@ -115,8 +127,9 @@ void EnemigoInteligente::advance(int phase)
 {
     if (!phase) return;
 
-    // Ejecutar la lógica base del enemigo
-    Enemigo::advance(phase);
+    // *** NO llamar a Enemigo::advance() para evitar su lógica ***
+    // En su lugar, llamamos directamente a Persona::advance()
+    // que maneja el movimiento básico
 
     // Verificar detección del jugador
     jugadorDetectado = detectarJugador();
@@ -318,9 +331,11 @@ void EnemigoInteligente::activarPersecucion()
 
     modoPersecucion = true;
 
-    // Velocidad reducida (60% de la velocidad original)
-    // Esto da ventaja al jugador para escapar
-    speed = velocidadOriginal * 0.6;
+    // *** CRÍTICO: Establecer velocidad de persecución ***
+    // Como el enemigo es estático (velocidad original = 0),
+    // necesitamos darle una velocidad base para perseguir
+    // Debe ser menor que la del jugador (jugador tiene 7.0)
+    speed = 4.0;  // 60% aproximado de 7.0
 
     qDebug() << "   ✓ Persecución activada - Velocidad:" << speed;
 }
@@ -331,8 +346,8 @@ void EnemigoInteligente::desactivarPersecucion()
 
     modoPersecucion = false;
 
-    // Restaurar velocidad original (0 para estático)
-    speed = velocidadOriginal;
+    // Volver a velocidad 0 (estático)
+    speed = 0;
 
     // Detener movimiento
     upPressed = false;
@@ -340,7 +355,7 @@ void EnemigoInteligente::desactivarPersecucion()
     leftPressed = false;
     rightPressed = false;
 
-    qDebug() << "   ✓ Persecución desactivada";
+    qDebug() << "   ✓ Persecución desactivada - Volviendo a modo estático";
 }
 
 /*
@@ -378,38 +393,25 @@ void EnemigoInteligente::dispararAObjetivo()
     Jugador* jugador = obtenerJugador();
     if (!jugador) return;
 
-    qDebug() << "   🔫 DISPARANDO proyectil hacia:" << ultimaPosicionJugador;
-
-    // Calcular dirección del disparo
+    // Calcular punto de inicio (centro del enemigo)
     QPointF centroEnemigo = scenePos() +
                             QPointF(boundingRect().width() / 2,
                                     boundingRect().height() / 2);
 
-    qreal dx = ultimaPosicionJugador.x() - centroEnemigo.x();
-    qreal dy = ultimaPosicionJugador.y() - centroEnemigo.y();
+    qDebug() << "   🔫 DISPARANDO proyectil inteligente";
+    qDebug() << "      Desde:" << centroEnemigo;
+    qDebug() << "      Hacia:" << ultimaPosicionJugador;
 
-    qreal distancia = std::sqrt(dx * dx + dy * dy);
+    // Crear proyectil inteligente direccional
+    ProyectilInteligente* proyectil = new ProyectilInteligente(
+        centroEnemigo,           // Punto de inicio
+        ultimaPosicionJugador,   // Punto objetivo
+        8.0,                     // Velocidad
+        1                        // Daño (1 vida)
+        );
 
-    if (distancia < 1) return;  // Evitar división por cero
+    proyectil->setOwner(this);
+    scene()->addItem(proyectil);
 
-    // Normalizar vector de dirección
-    dx /= distancia;
-    dy /= distancia;
-
-    // Crear proyectil
-    qreal velocidadProyectil = 8.0;
-
-    Proyectil* bala = new Proyectil(12, 12, velocidadProyectil, 1);
-    bala->setOwner(this);
-
-    // Posicionar en el centro del enemigo
-    bala->setPos(centroEnemigo);
-
-    // NOTA: El proyectil estándar solo se mueve vertical
-    // Para disparos direccionales, necesitarías un proyectil especial
-    // Por ahora, usamos proyectil vertical como demostración
-
-    scene()->addItem(bala);
-
-    qDebug() << "   💥 Proyectil creado";
+    qDebug() << "      ✓ Proyectil creado";
 }

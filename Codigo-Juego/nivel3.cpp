@@ -44,7 +44,7 @@ void Nivel3::configurarNivel()
 
     if (jugador) {
         jugador->setSpeed(7.0);  // Velocidad normal
-        jugador->setVida(100);
+        jugador->setVida(3);
         qDebug() << "Jugador creado en:" << posJugadorX << posJugadorY;
     }
 }
@@ -70,8 +70,8 @@ void Nivel3::crearEnemigos()
 
     // Posicionar en el centro de la escena
     centinela->setPos(sceneW * 0.6, sceneH * 0.5);
-    centinela->setVida(50);  // Bastante resistente
-    centinela->setSpeed(0);  // Estático por defecto
+    centinela->setVida(50);
+    centinela->setSpeed(4.0);  // Estático por defecto
     centinela->mostrarAreaDeteccion(true);  // Mostrar área visual
     centinela->setBrush(QBrush(QColor(100, 100, 255)));  // Azul inicial
 

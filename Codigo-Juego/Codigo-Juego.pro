@@ -21,6 +21,7 @@ SOURCES += \
     nivelbase.cpp \
     persona.cpp \
     proyectil.cpp \
+    proyectilinteligente.cpp \
     proyectiltanque.cpp \
     tanque.cpp \
     victoriascreen.cpp
@@ -41,6 +42,7 @@ HEADERS += \
     nivelbase.h \
     persona.h \
     proyectil.h \
+    proyectilinteligente.h \
     proyectiltanque.h \
     tanque.h \
     victoriascreen.h
