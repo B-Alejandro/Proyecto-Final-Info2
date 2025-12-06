@@ -4,64 +4,77 @@
 #include "nivelbase.h"
 #include <QList>
 #include <QTimer>
-#include <QElapsedTimer>
+#include <QElapsedTimer> // Necesario para danoObstaculoTimer y tiempoJugado
 #include <QGraphicsPixmapItem>
 
-// Declaraciones adelantadas
-class Juego;
-class Enemigo;
-class Obstaculo;
-class GameOverScreen;
-class QWidget;
-class QLabel;
+// INCLUSIONES CRÍTICAS
+#include "victoriascreen.h"
+#include "persona.h"
+#include <QWidget>
+#include <QLabel>
+#include "gameoverscreen.h" // <-- CORRECCIÓN CASE-SENSITIVITY (Minúsculas)
+
+// Declaraciones adelantadas...
 
 class Nivel2 : public NivelBase
 {
     Q_OBJECT
 
 public:
-
     Nivel2(Juego* juego, QObject* parent = nullptr);
     ~Nivel2() override;
 
-    // --- CORRECCIÓN 1: Acceso público desde juego.cpp ---
     void manejarTecla(Qt::Key key) ;
-    bool estaEnGameOver() const; // <-- CORRECCIÓN 2: Nuevo método de estado
+    bool estaEnGameOver() const;
+    bool estaEnVictoria() const { return nivelGanado; }
 
 protected:
     void configurarNivel() override;
     void crearEnemigos() override;
     void crearObstaculos() override;
     void actualizar() override;
-    // (manejarTecla se movió)
+    void reiniciarNivel();
 
 signals:
-    // --- CORRECCIÓN 3: Declarar la señal faltante ---
     void juegoTerminado();
+    void volverAMenuPrincipal();
 
 private slots:
     void onJuegoTerminado();
+    void verificarVictoriaPorTiempo();
+    void onEnemyDied(Persona* p); // <-- Declaración del slot que faltaba implementar
 
 private:
-    // --- Gestión de Corredor Infinito Triple (Métodos auxiliares) ---
-    void crearFondoDinamico();
-    void actualizarFondo(qreal posicionJugador);
-    void crearSueloTriple();
-    void actualizarSuelo(qreal posicionJugador);
-    void spawnearObstaculoAleatorio();
-    void limpiarObstaculosLejanos();
-    void reposicionarEscena();
+    // ... (Métodos auxiliares)
 
     // ================================================================
-    // ** MIEMBROS REORDENADOS para evitar -Wreorder **
+    // ** MIEMBROS DE ESTADO Y UI (Reordenados para -Wreorder-ctor) **
+    // ================================================================
+    GameOverScreen* pantallaGameOver;
+    VictoriaScreen* pantallaVictoria;
+    QTimer* timerVictoria;
+
+    bool juegoEnPausa;
+    bool nivelGanado;
+
+    // Timers de juego y cooldown
+    QElapsedTimer danoObstaculoTimer;
+    QElapsedTimer tiempoJugado; // <-- Variable declarada para el error anterior
+
+    // Elementos del HUD
+    QWidget* hudWidget;
+    QLabel* vidaLabel;
+    QLabel* tiempoLabel;
+    QLabel* scoreLabel;
+
+    // ================================================================
+    // ** RESTO DE MIEMBROS DEL NIVEL **
     // ================================================================
 
     Enemigo* enemigoAtras;
     Obstaculo* suelo1;
     Obstaculo* suelo2;
     Obstaculo* suelo3;
-    GameOverScreen* pantallaGameOver;
-    bool juegoEnPausa;
 
     QGraphicsPixmapItem* fondo1;
     QGraphicsPixmapItem* fondo2;
@@ -75,16 +88,17 @@ private:
     qreal distanciaEntreObstaculos;
     qreal ultimaPosicionSpawn;
     int contadorObstaculos;
-
-    QElapsedTimer tiempoJugado;
-    QElapsedTimer danoObstaculoTimer;
-
-    QList<Obstaculo*> obstaculos;
-
-    QWidget* hudWidget;
-    QLabel* vidaLabel;
-    QLabel* tiempoLabel;
-    QLabel* scoreLabel;
+private:
+    // ** CORRECCIÓN 1: Agregar los métodos auxiliares faltantes **
+    // --- Gestión de Corredor Infinito Triple (Métodos auxiliares) ---
+    void crearFondoDinamico();
+    void actualizarFondo(qreal posicionJugador);
+    void crearSueloTriple();
+    void actualizarSuelo(qreal posicionJugador);
+    void spawnearObstaculoAleatorio();
+    void limpiarObstaculosLejanos();
+    void reposicionarEscena();
+    // Métodos de colisión...
 };
 
 #endif // NIVEL2_H

@@ -4,9 +4,12 @@
 #include <QObject>
 #include <QGraphicsView>
 #include <QTimer>
-#include <QKeyEvent>  // *** NUEVO: AGREGAR ESTA LÍNEA ***
+#include <QKeyEvent>
+#include <QEvent>
 
+// Declaraciones adelantadas
 class NivelBase;
+class MenuPrincipal; // *** AGREGADO ***
 
 class Juego : public QObject
 {
@@ -22,8 +25,11 @@ public:
     int getVistaAncho() const { return vistaAncho; }
     int getVistaAlto() const { return vistaAlto; }
 
+    // *** NUEVO: Método para volver al menú principal ***
+    void mostrarMenuPrincipal();
+
 protected:
-    // *** NUEVO: Capturar eventos de teclado globales ***
+    // Capturar eventos de teclado globales (para la tecla ESC)
     bool eventFilter(QObject* obj, QEvent* event) override;
 
 private slots:
@@ -38,10 +44,13 @@ private:
     QTimer* timer;
 
     QList<NivelBase*> niveles;
-    int nivelActual;
+    int nivelActual; // -1: Menu, 0: Nivel1, 1: Nivel2, ...
 
     int vistaAncho;
     int vistaAlto;
+
+    // *** MIEMBRO AGREGADO ***
+    MenuPrincipal* menuPrincipal;
 };
 
 #endif

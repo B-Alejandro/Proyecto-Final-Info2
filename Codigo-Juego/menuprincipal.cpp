@@ -20,10 +20,8 @@
 #include <QMediaPlayer>
 #include <QAudioOutput>
 
-// Nota: Las constantes INTERVALO_MS y DURACION_TRANSICION_MS han sido movidas a la clase en menuprincipal.h
-
 // ===================================================================
-// CONSTRUCTOR (MODIFICADO)
+// CONSTRUCTOR
 // ===================================================================
 
 MenuPrincipal::MenuPrincipal(int ancho, int alto, QObject* parent)
@@ -39,7 +37,7 @@ MenuPrincipal::MenuPrincipal(int ancho, int alto, QObject* parent)
     // 1. Configurar dimensiones y fondo
     setSceneRect(0, 0, ancho, alto);
 
-    //  CARGAR FUENTE PERSONALIZADA
+    // 2. CARGAR FUENTE PERSONALIZADA
     QFontDatabase::addApplicationFont(":/Recursos/FuentesLetra/REVISTA.ttf");
     configurarFondo();
 
@@ -47,10 +45,7 @@ MenuPrincipal::MenuPrincipal(int ancho, int alto, QObject* parent)
     QWidget* panelBotones = new QWidget();
     panelBotones->setFixedWidth(300);
 
-    // ------------------------------------------------------------------
-    //  MODIFICACIÓN 1: ESTILO DE PERIÓDICO/REVISTA PARA EL PANEL (CON HOVER)
-    // ------------------------------------------------------------------
-
+    // Estilo de periódico/revista para el panel
     panelBotones->setStyleSheet(
         "QWidget {"
         // PROPIEDADES DE FONDO Y TEXTURA
@@ -58,13 +53,13 @@ MenuPrincipal::MenuPrincipal(int ancho, int alto, QObject* parent)
         "background-repeat: no-repeat;"
         "background-attachment: scroll;"
         "background-position: center;"
-        "background-size: 100% 100%;" // Ajuste de imagen
+        "background-size: 100% 100%;"
 
         // Fondo de respaldo/papel
         "background-color: rgb(245, 245, 220);"
 
         // PROPIEDADES DE BORDE
-        "border: 4px solid rgb(50, 50, 50);"      // Borde Color Tinta BASE
+        "border: 4px solid rgb(50, 50, 50);"
         "border-radius: 0px;"
         "padding: 5px;"
 
@@ -73,10 +68,10 @@ MenuPrincipal::MenuPrincipal(int ancho, int alto, QObject* parent)
         "color: rgb(20, 20, 20);"
         "}"
 
-        // ✅ ILUMINACIÓN DEL PANEL COMPLETO AL HACER HOVER
+        // Iluminación del panel completo al hacer hover
         "QWidget:hover {"
-        "border: 4px solid rgb(150, 150, 150);" // Borde gris claro para resaltar
-        "background-color: rgb(255, 255, 240);" // Fondo ligeramente más brillante
+        "border: 4px solid rgb(150, 150, 150);"
+        "background-color: rgb(255, 255, 240);"
         "}"
         );
 
@@ -86,13 +81,16 @@ MenuPrincipal::MenuPrincipal(int ancho, int alto, QObject* parent)
 
     // --- BOTONES DE NIVELES ---
     layout->addSpacing(10);
-    layout->addWidget(crearBotonCaotico("NIVEL UNO: TOMA", panelBotones, nullptr, 1));
-    layout->addWidget(crearBotonCaotico("NIVEL DOS: FUGA", panelBotones, nullptr, 2));
-    layout->addWidget(crearBotonCaotico("NIVEL TRES: OPERACION", panelBotones, nullptr, 3));
+
+    // 🔥 CORRECCIÓN CRÍTICA: Los IDs deben ser 0, 1, 2 (índices del array en juego.cpp)
+    layout->addWidget(crearBotonCaotico("NIVEL UNO: TOMA", panelBotones, nullptr, 0));
+    layout->addWidget(crearBotonCaotico("NIVEL DOS: FUGA", panelBotones, nullptr, 1));
+    layout->addWidget(crearBotonCaotico("NIVEL TRES: OPERACION", panelBotones, nullptr, 2));
+
     layout->addSpacing(10);
 
-    // --- Botón de Salida Caótico ---
-    layout->addWidget(crearBotonCaotico("SALIR DEL JUEGO 2", panelBotones, SLOT(onSalirClicked()), 0, true));
+    // --- Botón de Salida ---
+    layout->addWidget(crearBotonCaotico("SALIR DEL JUEGO", panelBotones, SLOT(onSalirClicked()), -1, true));
 
     panelBotones->setLayout(layout);
 
@@ -104,10 +102,7 @@ MenuPrincipal::MenuPrincipal(int ancho, int alto, QObject* parent)
     qreal y = (alto - panelBotones->height()) / 2.0;
     proxyPanel->setPos(x, y);
 
-    // -----------------------------------------------------------
-    //  MODIFICACIÓN 2: ESTILO DE TÍTULO DE REVISTA CON TEXTURA Y AJUSTE
-    // -----------------------------------------------------------
-
+    // --- TÍTULO ---
     QString tituloTexto = "1 MEMORIA DE ACERO 0";
     QLabel* titulo = new QLabel(tituloTexto.toUpper());
 
@@ -118,18 +113,18 @@ MenuPrincipal::MenuPrincipal(int ancho, int alto, QObject* parent)
     titulo->setFixedHeight(70);
     titulo->setFixedWidth(400);
 
-    // APLICAR ESTILO: SOLO IMAGEN DE FONDO DE TEXTURA, ELIMINANDO CUALQUIER COLOR DE FONDO.
+    // Aplicar estilo con textura
     titulo->setStyleSheet(
-        "color: rgb(0, 0, 0);" // Color de Tinta Negra
+        "color: rgb(0, 0, 0);"
 
-        // **INCLUSIÓN DE TEXTURA**
+        // Inclusión de textura
         "background-image: url(:/Recursos/Backgrounds/PERIDOIC-removebg-preview.png);"
         "background-repeat: no-repeat;"
         "background-attachment: scroll;"
         "background-position: center;"
-        "background-size: 100% 100%;" // Ajuste de imagen al tamaño del QLabel
+        "background-size: 100% 100%;"
 
-        // Se mantiene el color de papel para rellenar las transparencias de la imagen.
+        // Color de papel para rellenar transparencias
         "background-color: rgb(245, 245, 220);"
 
         "padding: 10px;"
@@ -143,19 +138,19 @@ MenuPrincipal::MenuPrincipal(int ancho, int alto, QObject* parent)
     qreal y_titulo = proxyPanel->y() - titulo->height() - 30;
     proxyTitulo->setPos(x_titulo, y_titulo);
 
-    // -----------------------------------------------------------
-
+    // Efectos de sombra
     QGraphicsDropShadowEffect* shadow = new QGraphicsDropShadowEffect();
     shadow->setBlurRadius(10);
     shadow->setColor(QColor(0, 0, 0, 180));
-    // Aplicamos la sombra al panel y al título
+
+    // Aplicar sombra al panel y al título
     proxyPanel->setGraphicsEffect(shadow);
     proxyTitulo->setGraphicsEffect(shadow);
 
     opacityEffect = new QGraphicsOpacityEffect(this);
     opacityEffect->setOpacity(opacidadActual);
 
-    // Aplicamos el efecto de opacidad a ambos elementos
+    // Aplicar efecto de opacidad a ambos elementos
     proxyPanel->setGraphicsEffect(opacityEffect);
     proxyTitulo->setGraphicsEffect(opacityEffect);
 
@@ -165,7 +160,7 @@ MenuPrincipal::MenuPrincipal(int ancho, int alto, QObject* parent)
     transicionTimer = new QTimer(this);
     connect(transicionTimer, &QTimer::timeout, this, &MenuPrincipal::actualizarOpacidad);
 
-    // 2. CREAR EL BOTÓN DE MÚSICA (IZQUIERDA) y iniciar todo
+    // 5. Crear el botón de música y iniciar todo
     crearBotonMusica(ancho, alto);
 
     QTimer::singleShot(10, this, [this]{
@@ -175,7 +170,7 @@ MenuPrincipal::MenuPrincipal(int ancho, int alto, QObject* parent)
 }
 
 // ===================================================================
-// LÓGICA DE MÚSICA (SIN CAMBIOS FUNCIONALES, SOLO ESTÉTICOS)
+// LÓGICA DE MÚSICA
 // ===================================================================
 
 void MenuPrincipal::iniciarMusicaMenu()
@@ -189,6 +184,17 @@ void MenuPrincipal::iniciarMusicaMenu()
     audioOutput->setVolume(0.5);
     musicaMenu->setLoops(QMediaPlayer::Infinite);
     musicaMenu->play();
+
+    qDebug() << "🎵 Música del menú iniciada";
+}
+
+// 🔥 NUEVO MÉTODO PÚBLICO para detener la música
+void MenuPrincipal::detenerMusica()
+{
+    if (musicaMenu) {
+        musicaMenu->stop();
+        qDebug() << "🔇 Música del menú detenida";
+    }
 }
 
 void MenuPrincipal::crearBotonMusica(int anchoVista, int altoVista)
@@ -200,12 +206,11 @@ void MenuPrincipal::crearBotonMusica(int anchoVista, int altoVista)
     // Estilo adaptado al look de revista (tinta/papel)
     botonMusica->setStyleSheet(
         "QPushButton {"
-        "background-color: rgba(220, 220, 220, 180);" // Fondo gris claro (papel)
-        "border: 2px solid rgb(0, 0, 0);" // Borde de tinta negra
+        "background-color: rgba(220, 220, 220, 180);"
+        "border: 2px solid rgb(0, 0, 0);"
         "border-radius: 5px;"
         "}"
-        // ✅ HOVER para el botón de música
-        "QPushButton:hover { background-color: rgba(255, 255, 255, 200); }" // Tono más brillante/blanco al pasar
+        "QPushButton:hover { background-color: rgba(255, 255, 255, 200); }"
         );
 
     connect(botonMusica, &QPushButton::clicked, this, &MenuPrincipal::onToggleMusicaClicked);
@@ -221,25 +226,30 @@ void MenuPrincipal::onToggleMusicaClicked()
     if (musicaMenu->playbackState() == QMediaPlayer::PlayingState) {
         musicaMenu->pause();
         botonMusica->setIcon(QIcon(":/Recursos/OtrosRecursos/sound-off.png"));
-        qDebug() << "Música pausada.";
+        qDebug() << "🔇 Música pausada.";
     } else {
         musicaMenu->play();
         botonMusica->setIcon(QIcon(":/Recursos/OtrosRecursos/sound-on.png"));
-        qDebug() << "Música reanudada.";
+        qDebug() << "🔊 Música reanudada.";
     }
 }
 
 // ===================================================================
-// LÓGICA DE NIVELES Y BOTONES (MODIFICADO - CON HOVER)
+// LÓGICA DE NIVELES Y BOTONES
 // ===================================================================
 
 void MenuPrincipal::onIniciarNivelClicked(int idNivel)
 {
+    qDebug() << "🎮 MenuPrincipal: Iniciando nivel con ID:" << idNivel;
     emit iniciarNivel(idNivel);
 }
 
+void MenuPrincipal::onSalirClicked()
+{
+    qDebug() << "👋 Saliendo del juego...";
+    emit salirJuego();
+}
 
-// ⬇️ FUNCIÓN MODIFICADA CON ESTILOS DE TINTA DE PERIÓDICO Y HOVER
 QPushButton* MenuPrincipal::crearBotonCaotico(const QString& texto, QWidget* contenedor, const char* slot, int idNivel, bool esBotonSalir)
 {
     QPushButton* btn = new QPushButton(texto, contenedor);
@@ -252,8 +262,8 @@ QPushButton* MenuPrincipal::crearBotonCaotico(const QString& texto, QWidget* con
         styleSheet =
             "QPushButton {"
             "background-color: rgb(240, 240, 240);"
-            "color: rgb(180, 0, 0);" // Tinta Roja de Advertencia
-            "border: 3px solid rgb(180, 0, 0);" // Borde de Tinta Roja
+            "color: rgb(180, 0, 0);"
+            "border: 3px solid rgb(180, 0, 0);"
             "border-radius: 4px;"
 
             "padding: 8px 15px;"
@@ -264,8 +274,8 @@ QPushButton* MenuPrincipal::crearBotonCaotico(const QString& texto, QWidget* con
 
             "}"
             "QPushButton:hover {"
-            "background-color: rgb(255, 240, 240);" // ✅ ILUMINACIÓN: Fondo casi blanco/rosado brillante
-            "border-color: rgb(255, 0, 0);" // Borde rojo más vivo
+            "background-color: rgb(255, 240, 240);"
+            "border-color: rgb(255, 0, 0);"
             "border-style: solid;"
             "}"
             "QPushButton:pressed {"
@@ -280,9 +290,9 @@ QPushButton* MenuPrincipal::crearBotonCaotico(const QString& texto, QWidget* con
             "QPushButton {"
             // Fondo transparente para heredar la textura de papel del panel
             "background-color: transparent;"
-            "color: rgb(20, 20, 20);" // Tinta Negra
-            "border: 2px solid rgb(20, 20, 20);" // Borde Tinta Fina
-            "border-radius: 0px;" // Borde cuadrado
+            "color: rgb(20, 20, 20);"
+            "border: 2px solid rgb(20, 20, 20);"
+            "border-radius: 0px;"
 
             "padding: 5px 10px;"
             "font-size: 11pt;"
@@ -291,7 +301,7 @@ QPushButton* MenuPrincipal::crearBotonCaotico(const QString& texto, QWidget* con
             "text-transform: uppercase;"
             "}"
             "QPushButton:hover {"
-            "background-color: rgba(255, 255, 255, 200);" // ✅ ILUMINACIÓN: Blanco casi opaco sobre la textura
+            "background-color: rgba(255, 255, 255, 200);"
             "border-style: solid;"
             "}"
             "QPushButton:pressed {"
@@ -308,13 +318,17 @@ QPushButton* MenuPrincipal::crearBotonCaotico(const QString& texto, QWidget* con
     btn->setStyleSheet(styleSheet);
 
     // Conexión con QSignalMapper
-    if (idNivel > 0) {
+    // 🔥 CORRECCIÓN: Verificar que idNivel sea >= 0 (no > 0)
+    if (idNivel >= 0) {
         QSignalMapper *mapper = new QSignalMapper(this);
         connect(btn, SIGNAL(clicked()), mapper, SLOT(map()));
         mapper->setMapping(btn, idNivel);
         connect(mapper, SIGNAL(mappedInt(int)), this, SLOT(onIniciarNivelClicked(int)));
+
+        qDebug() << "✅ Botón nivel creado:" << texto << "-> ID:" << idNivel;
     } else if (slot) {
         connect(btn, SIGNAL(clicked()), this, slot);
+        qDebug() << "✅ Botón acción creado:" << texto;
     }
 
     // El layout se encarga de agregar el widget si ya tiene uno.
@@ -325,9 +339,8 @@ QPushButton* MenuPrincipal::crearBotonCaotico(const QString& texto, QWidget* con
     return btn;
 }
 
-
 // ===================================================================
-// FUNCIONES DE UTILIDAD (SIN CAMBIOS FUNCIONALES)
+// FUNCIONES DE UTILIDAD
 // ===================================================================
 
 void MenuPrincipal::configurarFondo()
@@ -343,6 +356,7 @@ void MenuPrincipal::configurarFondo()
         setBackgroundBrush(QBrush(fondoEscalado));
     } else {
         setBackgroundBrush(QBrush(QColor(30, 0, 0)));
+        qDebug() << "⚠️ No se pudo cargar el fondo del menú";
     }
 }
 
@@ -354,7 +368,7 @@ void MenuPrincipal::iniciarTransicionEntrada()
     }
 
     transicionTimer->start(INTERVALO_MS);
-    qDebug() << "Iniciando transición de entrada...";
+    qDebug() << "🎬 Iniciando transición de entrada...";
 }
 
 void MenuPrincipal::actualizarOpacidad()
@@ -365,7 +379,7 @@ void MenuPrincipal::actualizarOpacidad()
     if (opacidadActual >= 1.0) {
         opacidadActual = 1.0;
         transicionTimer->stop();
-        qDebug() << "Transición de entrada finalizada.";
+        qDebug() << "✅ Transición de entrada finalizada.";
     }
 
     if (opacityEffect) {

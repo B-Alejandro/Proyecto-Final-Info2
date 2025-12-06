@@ -751,29 +751,25 @@ void Nivel1::onJugadorMurio()
 }
 
 // ============ nivel1.cpp (manejarTecla Corregido) ============
+// ============ nivel1.cpp (manejarTecla CORREGIDO) ============
 
 void Nivel1::manejarTecla(Qt::Key key)
 {
     // 1. MANEJO DE PAUSA / GAME OVER / VICTORIA
-    // Si el juego está en pausa, solo se permiten acciones de sistema.
     if (juegoEnPausa) {
-
-        // CRÍTICO: Corrección del error de compilación.
-        // Se usa 'estaVisible()' en lugar de 'isVisible()' para GameOverScreen/VictoriaScreen.
+        // Si hay pantallas visibles (Game Over o Victoria)
         if (pantallaGameOver->estaVisible() || pantallaVictoria->estaVisible()) {
             if (key == Qt::Key_R) {
                 reiniciarNivel();
                 return;
             }
             if (key == Qt::Key_Escape) {
-                // Emite la señal que la clase principal (Juego) debe conectar
                 emit volverAMenuPrincipal();
                 return;
             }
         }
 
-        // Si solo está en pausa con el menú visible, el manejo se hace por botones de clic,
-        // no por teclas.
+        // Si solo está el menú de pausa visible, las acciones se manejan por botones
         return;
     }
 
@@ -782,32 +778,45 @@ void Nivel1::manejarTecla(Qt::Key key)
         return;
     }
 
+    // 🔥 SOLUCIÓN: Procesar el movimiento directamente modificando las flags
     switch (key) {
     case Qt::Key_A:
     case Qt::Key_Left:
-        // ⚠️ Temporalmente COMENTADO para evitar ERROR DE COMPILACIÓN.
-        // Debe descomentarse una vez que Jugador::moverIzquierda() se declare en jugador.h.
-        // jugador->moverIzquierda();
-        qDebug() << "⬅️ Solicitud de movimiento a la izquierda (Pendiente de implementación en Jugador).";
+        jugador->leftPressed = true;
+        jugador->rightPressed = false;
+        qDebug() << "⬅️ Moviendo a la izquierda";
         break;
 
     case Qt::Key_D:
     case Qt::Key_Right:
-        // ⚠️ Temporalmente COMENTADO para evitar ERROR DE COMPILACIÓN.
-        // jugador->moverDerecha();
-        qDebug() << "➡️ Solicitud de movimiento a la derecha (Pendiente de implementación en Jugador).";
+        jugador->rightPressed = true;
+        jugador->leftPressed = false;
+        qDebug() << "➡️ Moviendo a la derecha";
+        break;
+
+    case Qt::Key_W:
+    case Qt::Key_Up:
+        jugador->upPressed = true;
+        jugador->downPressed = false;
+        qDebug() << "⬆️ Moviendo hacia arriba";
+        break;
+
+    case Qt::Key_S:
+    case Qt::Key_Down:
+        jugador->downPressed = true;
+        jugador->upPressed = false;
+        qDebug() << "⬇️ Moviendo hacia abajo";
         break;
 
     case Qt::Key_Space:
-        // ⚠️ Temporalmente COMENTADO para evitar ERROR DE COMPILACIÓN.
-        // jugador->atacar();
-        qDebug() << "💥 Solicitud de ataque (Pendiente de implementación en Jugador).";
+        // TODO: Implementar ataque cuando esté listo
+        qDebug() << "💥 Ataque (pendiente de implementación)";
         break;
 
     case Qt::Key_Escape:
-        // Si el juego está corriendo, la tecla ESC pausa el juego.
+        // Pausar el juego
         manejarPausa();
-        qDebug() << "⏸️ Tecla ESC presionada, pausando el juego.";
+        qDebug() << "⏸️ Juego pausado";
         break;
 
     default:
