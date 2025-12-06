@@ -1,4 +1,3 @@
-// ============ jugador.cpp ============
 #include "jugador.h"
 #include <QBrush>
 #include <QDebug>
@@ -21,7 +20,7 @@ Jugador::Jugador(qreal w,
 
 void Jugador::cargarSpritesnivel2()
 {
-    qDebug() << "=== CARGANDO SPRITES DEL JUGADOR ===";
+    qDebug() << "=== CARGANDO SPRITES DEL JUGADOR: Nivel 2+ ===";
 
     QString rutaIdle = ":/Recursos/Sprites/Idle_homeless.png";
     QString rutaRun = ":/Recursos/Sprites/Run_homeless.png";
@@ -137,8 +136,14 @@ void Jugador::keyPressEvent(QKeyEvent* event)
         return;
     }
 
+    // Lógica de disparo
     if (event->key() == Qt::Key_Space) {
         if (!scene()) return;
+
+        // Si el tipo de movimiento es CON_GRAVEDAD, Space también puede ser Salto.
+        // Si el juego usa Space para Salto Y Disparo, puede haber un conflicto
+        // a menos que el Salto se maneje solo cuando onGround es true, y el Disparo siempre.
+        // Por ahora, manejamos el disparo aquí, y el salto abajo en la sección CON_GRAVEDAD.
 
         qreal projW = 10;
         qreal projH = 16;
@@ -151,13 +156,14 @@ void Jugador::keyPressEvent(QKeyEvent* event)
         // spawn en la “parte superior” del jugador
         QRectF br = boundingRect();             // local
         QPointF spawn = scenePos()
-                        + QPointF(0, br.top() - projH/2.0);
+                        + QPointF(br.width() / 2 - projW / 2, br.top() - projH / 2.0); // CORRECCIÓN de posición x para centrar
 
         bala->setPos(spawn);
         scene()->addItem(bala);
-        return;
+        // NO retornamos aquí para permitir que Space se use también para salto si el movimiento es CON_GRAVEDAD
     }
 
+    // Lógica de movimiento
     if (tipoMovimiento == TipoMovimiento::RECTILINEO) {
         switch (event->key()) {
         case Qt::Key_Up:
@@ -179,11 +185,10 @@ void Jugador::keyPressEvent(QKeyEvent* event)
         }
     } else {
         // CON_GRAVEDAD: Solo cambiar el estado de las teclas
-        // NO forzar animaciones aqui - persona.cpp lo maneja
         switch (event->key()) {
         case Qt::Key_Up:
         case Qt::Key_W:
-        case Qt::Key_Space:
+        case Qt::Key_Space: // Si Space no fue consumido por el disparo, o si dispara y salta a la vez.
             if (onGround) {
                 vy = -10;
                 onGround = false;
@@ -229,7 +234,6 @@ void Jugador::keyReleaseEvent(QKeyEvent* event)
         }
     } else {
         // CON_GRAVEDAD: Solo cambiar el estado de las teclas
-        // NO forzar animaciones aqui - persona.cpp lo maneja
         switch (event->key()) {
         case Qt::Key_Left:
         case Qt::Key_A:
@@ -241,4 +245,42 @@ void Jugador::keyReleaseEvent(QKeyEvent* event)
             break;
         }
     }
+}
+
+/*
+ * Carga la hoja de sprites para el Nivel 1.
+ * Ruta: :/Recursos/Sprites/JugadorNivel1.png (Tamaño total: 1000x250).
+ */
+void Jugador::cargarSpritesNivel1()
+{
+    qDebug() << "=== CARGANDO SPRITES DEL JUGADOR: Nivel 1 ===";
+
+    QString ruta = ":/Recursos/Sprites/JugadorNivel1.png";
+    spriteSheet = QPixmap(ruta);
+
+    if (spriteSheet.isNull()) {
+        qDebug() << " ERROR: No se pudo cargar JugadorNivel1.png";
+        usarSprites = false;
+        return;
+    }
+
+    const int numFrames = 8;
+
+    // 1. **CORRECCIÓN: ANCHO DE AVANCE COMPLETO**
+    // El anchoSprite debe ser el ancho COMPLETO de un frame (125px = 1000/8)
+    // para que el avance en la hoja sea correcto.
+    anchoSprite = spriteSheet.width() / numFrames;
+    anchoSprite+=4; // Se añade +4 como se vio en el código original para ajuste
+
+    // 2. La altura del frame es la altura total de la imagen
+    altoSprite = spriteSheet.height();
+
+    this->totalFrames = numFrames;
+    usarSprites = true;
+
+    // Nota: El llamado a setSprite() de Persona no se usa aquí. Se espera que
+    // el sprite se dibuje usando estas variables (anchoSprite, altoSprite, totalFrames)
+    // directamente en el paint() de Persona.
+
+    qDebug() << " Sprites de Nivel 1 cargados. Frame:" << anchoSprite << "x" << altoSprite << ", Total Frames:" << this->totalFrames;
 }

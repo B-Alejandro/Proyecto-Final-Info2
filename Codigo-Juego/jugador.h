@@ -10,13 +10,14 @@ class Jugador : public Persona
 {
     Q_OBJECT
 public:
+    void saltar();
     Jugador(qreal w, qreal h, qreal sceneWidth, qreal sceneHeight, TipoMovimiento tipo);
 
     void cargarSpritesnivel2();
 
     // Metodo para activar animacion de muerte
     void activarAnimacionMuerte();
-
+void cargarSpritesNivel1();
 protected:
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;

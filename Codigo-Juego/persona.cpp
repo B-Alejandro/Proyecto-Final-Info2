@@ -44,7 +44,7 @@ Persona::Persona(qreal w, qreal h, qreal sceneWidth, qreal sceneHeight, TipoMovi
     leftPressed = false;
     rightPressed = false;
     vy = 0.0;
-    g = 0.5;
+    g = 0.3;
     onGround = false;
 
     // *** RESTAURADO: timer interno de movimiento ***
@@ -297,4 +297,16 @@ void Persona::paint(QPainter* painter, const QStyleOptionGraphicsItem*, QWidget*
         painter->setPen(pen());
         painter->drawRect(rect());
     }
+}
+void Persona::iniciarInvulnerabilidad(int duration_ms)
+{
+    if (invulnerable) {
+        // Si ya es invulnerable, solo reinicia el timer (repite la invulnerabilidad)
+        timerInvulnerabilidad->start(duration_ms);
+        return;
+    }
+
+    invulnerable = true;
+    timerInvulnerabilidad->start(duration_ms);
+    qDebug() << "INICIO Invulnerabilidad por" << duration_ms << "ms.";
 }

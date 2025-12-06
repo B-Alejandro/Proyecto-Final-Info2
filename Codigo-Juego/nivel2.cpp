@@ -1015,3 +1015,61 @@ void Nivel2::manejarTecla(Qt::Key key)
         qDebug() << "Volver al menú...";
     }
 }
+void Jugador::saltar()
+{
+    // CRÍTICO: Solo permite saltar si el personaje está en el suelo (onGround == true).
+    if (onGround) {
+        vy = -10;             // Setea la velocidad vertical para subir (valor negativo)
+        onGround = false;     // El jugador ya no está en el suelo
+        setAnimacion(EstadoAnimacion::SALTANDO);
+        qDebug() << "SALTO DISPARADO por llamada externa!";
+    } else {
+        // opcional: qDebug() << "Intento de salto, pero no está en el suelo.";
+    }
+}
+// ====================================================================
+// SLOT: verificarVictoriaPorTiempo
+// ====================================================================
+void Nivel2::verificarVictoriaPorTiempo()
+{
+    // 1. Verificar si el jugador sigue vivo (y no ha ganado ya)
+    if (jugador && jugador->estaVivo() && !nivelGanado)
+    {
+        nivelGanado = true;
+        juegoEnPausa = true; // Detener la lógica principal
+
+        // 2. Mostrar la pantalla de victoria
+        // Puedes pasar 0, un valor fijo (ej: 100), o un puntaje acumulado si lo tuvieras.
+        pantallaVictoria->mostrar(100);
+
+        qDebug() << "¡NIVEL 2 COMPLETADO POR SUPERVIVENCIA!";
+    }
+    // Si el jugador murió antes, onJuegoTerminado() se encargó del Game Over.
+}
+// ====================================================================
+// PRIVATE SLOTS
+// ====================================================================
+
+/**
+ * Slot llamado cuando un enemigo (o persona, en el caso del enemigoAtras) muere.
+ * En Nivel2 (Corredor Infinito), simplemente elimina el objeto muerto del escenario.
+ */
+void Nivel2::onEnemyDied(Persona* p)
+{
+    // 1. Desconectar señales para evitar llamadas a objetos eliminados
+    p->disconnect(this);
+
+    // 2. Eliminar del escenario y liberar memoria
+    if (escena && p) {
+        escena->removeItem(p);
+        p->deleteLater();
+    }
+}
+
+// Asegúrate de que este slot también esté en tu archivo si la implementaste para victoria por tiempo.
+/*
+void Nivel2::verificarVictoriaPorTiempo()
+{
+    // ... (Tu lógica de victoria por tiempo)
+}
+*/

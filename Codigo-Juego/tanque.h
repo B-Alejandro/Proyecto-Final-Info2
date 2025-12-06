@@ -3,69 +3,54 @@
 
 #include "persona.h"
 #include <QTimer>
+#include <QGraphicsPixmapItem>
+#include <QPixmap>
 
-/**
- * Clase Tanque
- *
- * Enemigo especial que:
- * - Se mueve verticalmente hacia abajo (como enemigos nivel 1)
- * - Tiene más vida (5 puntos)
- * - Dispara proyectiles parabólicos periódicamente
- * - Solo aparece en los extremos de la pantalla
- */
 class Tanque : public Persona
 {
     Q_OBJECT
 
 public:
-    /**
-     * Constructor del tanque
-     * @param w Ancho del tanque
-     * @param h Alto del tanque
-     * @param sceneWidth Ancho de la escena
-     * @param sceneHeight Alto de la escena
-     * @param posicionX Posición X inicial (debe ser extremo izquierdo o derecho)
-     */
-    Tanque(qreal w,
-           qreal h,
-           qreal sceneWidth,
-           qreal sceneHeight,
-           qreal posicionX);
-
+    Tanque(qreal w, qreal h, qreal sceneWidth, qreal sceneHeight, qreal posicionX);
     ~Tanque();
 
-    /**
-     * Obtiene el tiempo entre disparos
-     */
-    int getTiempoDisparo() const { return tiempoEntreDisparos; }
-
-    /**
-     * Establece el tiempo entre disparos
-     */
     void setTiempoDisparo(int ms) { tiempoEntreDisparos = ms; }
 
-    /**
-     * Verifica si el tanque está en el lado izquierdo
-     */
-    bool estaEnLadoIzquierdo() const { return ladoIzquierdo; }
+    // ========================================================================
+    // 🎨 TRES MÉTODOS PARA AGREGAR SPRITES (Elige el que prefieras)
+    // ========================================================================
+
+    // MÉTODO 1: Simple - Sprite como textura del brush (más fácil)
+    void cargarSpriteTanque();
+
+    // MÉTODO 2: Avanzado - Sprite como QGraphicsPixmapItem hijo (mejor calidad)
+    void cargarSpriteComoPixmap();
+
+    // MÉTODO 3: Custom - Sobrescribir paint() para control total
+    void cargarSpriteCustomPaint(const QString& rutaSprite);
 
 protected:
-    /**
-     * Maneja el input del tanque (movimiento automático hacia abajo)
-     */
+    // ✅ CRÍTICO: Sobrescribir handleInput() para mantener movimiento constante
     void handleInput() override;
 
-private slots:
-    /**
-     * Ejecuta el disparo del proyectil parabólico
-     */
-    void disparar();
+    // Para MÉTODO 3: Sobrescribir paint
+    void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget = nullptr) override;
 
 private:
-    QTimer* timerDisparo;           // Timer para disparos periódicos
-    int tiempoEntreDisparos;        // Tiempo en ms entre disparos
-    bool ladoIzquierdo;             // true si está en el lado izquierdo
-    qreal velocidadDescenso;        // Velocidad de caída vertical
+    QTimer* timerDisparo;
+    int tiempoEntreDisparos;
+    qreal velocidadDescenso;
+    bool ladoIzquierdo;
+
+    // Para MÉTODO 2: QGraphicsPixmapItem hijo
+    QGraphicsPixmapItem* spriteItem;
+
+    // Para MÉTODO 3: Paint personalizado
+    QPixmap spriteEstaticoTanque;
+    bool spriteCargado = false;
+
+private slots:
+    void disparar();
 };
 
 #endif // TANQUE_H

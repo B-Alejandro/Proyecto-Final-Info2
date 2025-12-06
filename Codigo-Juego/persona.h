@@ -7,12 +7,15 @@
 #include <QPixmap>
 #include <QRectF>
 #include <QObject> // Asegurar que QObject está incluido
+#include <QPainter> // Necesario para QPainter en paint()
+#include <QStyleOptionGraphicsItem>
+#include <QWidget>
 
 /*
- Persona.h
- Clase base para entidades con movimiento, fisica y animacion por sprites.
- Esta version declara boundingRect() para evitar warnings y errores de definicion fuera de linea.
-*/
+ * Persona.h
+ * Clase base para entidades con movimiento, fisica y animacion por sprites.
+ * Esta version declara boundingRect() para evitar warnings y errores de definicion fuera de linea.
+ */
 
 enum class TipoMovimiento {
     RECTILINEO,
@@ -55,6 +58,7 @@ public:
     void curar(int cantidad);
     bool estaVivo() const { return vidaActual > 0; }
     bool estaInvulnerable() const { return invulnerable; }
+    void iniciarInvulnerabilidad(int duration_ms);
 
     // manejo de sprites
     void setSprite(const QString& rutaImagen, int anchoFrame, int altoFrame, int numFrames);
