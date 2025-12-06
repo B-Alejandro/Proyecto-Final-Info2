@@ -7,13 +7,14 @@
 #include <QGraphicsScene>
 #include <QTimer>
 #include <QDebug>
+#include <QPen> // Aseguramos que QPen esté incluido
 
 /*
- Constructor unificado
-
- nivel == 1  -> IA simple (descendente, disparo), poca vida
- nivel != 1  -> IA avanzada (persecucion, salto inteligente), más vida
-*/
+ * Constructor unificado
+ *
+ * nivel == 1  -> IA simple (descendente, disparo), poca vida, sin sprites (solo color o EnemigoN1.png)
+ * nivel != 1  -> IA avanzada (persecucion, salto inteligente), más vida, usa sprites Soldier_...
+ */
 Enemigo::Enemigo(qreal w,
                  qreal h,
                  qreal sceneWidth,
@@ -30,7 +31,7 @@ Enemigo::Enemigo(qreal w,
     changeDirectionTime = 2000;
     canJump = true;
 
-    // *** NUEVO: Configurar sistema de disparo (desde la rama de merge) ***
+    // *** Configurar sistema de disparo ***
     tiempoEntreDisparos = 2000; // Dispara cada 2 segundos
     timerDisparo = new QTimer(this);
     connect(timerDisparo, &QTimer::timeout, this, &Enemigo::intentarDisparar);
@@ -47,16 +48,20 @@ Enemigo::Enemigo(qreal w,
 
     if (numeroNivel == 1)
     {
-        // *** NIVEL 1: Configuración para movimiento descendente ***
+        // *** NIVEL 1: Configuración para movimiento descendente y disparo ***
         upPressed = false;
         leftPressed = false;
         rightPressed = false;
         downPressed = true;  // Siempre moviéndose hacia abajo
 
-        speed = 5.0; // Velocidad ligeramente menor (de HEAD)
+        speed = 5.0; // Velocidad de IA simple
+        setVida(3); // Vida baja
 
-        // *** CRÍTICO: Configurar vida baja para nivel 1 ***
-        setVida(3);
+        // CORRECCIÓN FLICKERING 2: FORZAR BROCHA TRANSPARENTE
+        setBrush(Qt::transparent);
+
+        // Cargar sprite específico de nivel 1 (si existe)
+        cargarSpritesNivel1();
 
         qDebug() << "Enemigo Nivel 1 creado en pos:" << x() << y()
                  << "con speed:" << speed
@@ -65,20 +70,21 @@ Enemigo::Enemigo(qreal w,
     }
     else
     {
-        // *** NIVEL 2+: Modo inactivo hasta activar persecución ***
-        speed = 0;
-        setVida(500);
+        // *** NIVEL 2+: Modo inactivo hasta activar persecución, IA avanzada ***
+        speed = 0; // Inactivo
+        setVida(500); // Vida alta
         aiTimer->start(changeDirectionTime);
+        cargarSprites(); // Cargar sprites avanzados
         qDebug() << "Enemigo creado en modo inactivo con vida:" << getVida();
     }
 }
 
 /*
- Carga de sprites para niveles que los necesitan (nivel 2)
-*/
+ * Carga de sprites para niveles que los necesitan (nivel 2+)
+ */
 void Enemigo::cargarSprites()
 {
-    qDebug() << "Cargando sprites enemigo";
+    qDebug() << "Cargando sprites enemigo Nivel 2+";
 
     QString rutaIdle  = ":/Recursos/Sprites/Soldier_Idle.png";
     QString rutaRun   = ":/Recursos/Sprites/Run_soldier.png";
@@ -86,15 +92,16 @@ void Enemigo::cargarSprites()
     QString rutaDeath = ":/Recursos/Sprites/Attacck.png";
 
     spriteIdle     = QPixmap(rutaIdle);
-    spriteCorrer = QPixmap(rutaRun);
-    spriteSaltar = QPixmap(rutaJump);
-    spriteMuerte = QPixmap(rutaDeath);
+    spriteCorrer   = QPixmap(rutaRun);
+    spriteSaltar   = QPixmap(rutaJump);
+    spriteMuerte   = QPixmap(rutaDeath);
 
+    // Fallback por si alguna ruta falla
     if (spriteIdle.isNull()) spriteIdle = spriteCorrer;
     if (spriteSaltar.isNull()) spriteSaltar = spriteCorrer;
     if (spriteMuerte.isNull()) spriteMuerte = spriteCorrer;
 
-    // *** Se mantiene la configuración de sprite de HEAD (más controlada para IDLE) ***
+    // Se mantiene la configuración de sprite de HEAD (más controlada para IDLE)
     setSprite(rutaIdle, 128, 128, 1);
     estadoActual = EstadoAnimacion::IDLE;
     frameActual = 0;
@@ -108,11 +115,40 @@ void Enemigo::cargarSprites()
 }
 
 /*
- Lógica para cambiar el sprite basado en el estado de animación
- Se utiliza la versión con correcciones de HEAD.
-*/
+ * Carga de sprites para Nivel 1 (EnemigoN1.png)
+ */
+void Enemigo::cargarSpritesNivel1()
+{
+    // Ruta y configuracion para EnemigoN1.png
+    QString rutaBase = ":/Recursos/Sprites/EnemigoN1.png";
+
+    if (spriteSheet.load(rutaBase)) {
+        usarSprites = true;
+
+        // ** Configuración para EnemigoN1.png **
+        totalFrames = 1;
+        frameActual = 0;
+
+        if (timerAnimacion) {
+            timerAnimacion->setInterval(100);
+            reanudarAnimacion();
+        }
+
+        qDebug() << "Sprites del Enemigo Nivel 1 cargados:" << rutaBase;
+    } else {
+        qDebug() << "ERROR: No se pudo cargar el sprite del Enemigo Nivel 1:" << rutaBase;
+        usarSprites = false;
+    }
+}
+
+/*
+ * Lógica para cambiar el sprite basado en el estado de animación (Solo Nivel 2+)
+ * Se utiliza la versión con correcciones de HEAD.
+ */
 void Enemigo::cambiarSpritePorEstado()
 {
+    if (numeroNivel == 1) return; // Nivel 1 tiene sprites estáticos o usa cargarSpritesNivel1
+
     EstadoAnimacion estado = getEstadoAnimacion();
 
     // Determinar el sprite y frames deseados
@@ -170,8 +206,8 @@ void Enemigo::activarAnimacionMuerte()
 }
 
 /*
- Activar IA de persecucion (solo nivel 2+)
-*/
+ * Activar IA de persecucion (solo nivel 2+)
+ */
 void Enemigo::activarPersecucion()
 {
     if (numeroNivel == 1) return;
@@ -191,8 +227,8 @@ void Enemigo::activarPersecucion()
 }
 
 /*
- IA principal de movimiento - SOBRESCRIBE handleInput de Persona
-*/
+ * IA principal de movimiento - SOBRESCRIBE handleInput de Persona
+ */
 void Enemigo::handleInput()
 {
     if (numeroNivel == 1)
@@ -243,6 +279,7 @@ void Enemigo::handleInput()
         mirandoIzquierda = true;
     }
 
+    // Lógica de salto inteligente: si estoy en el suelo, intento saltar si hay obstáculo adelante
     if (canJump && onGround)
         tryJumpIfObstacleAhead();
 }
@@ -255,12 +292,19 @@ void Enemigo::changeDirection()
         return;
     }
 
-    randomizeDirection();
+    // Esta función se conecta al aiTimer, pero la IA de persecución (handleInput)
+    // sobrescribe la dirección, por lo que esta función solo tiene efecto si la IA
+    // se detiene o si se implementara movimiento aleatorio puro (randomizeDirection)
+    // en lugar de persecución.
+
+    // La lógica de persecución en handleInput es dominante.
+    // Mantenemos randomizeDirection por si se necesita para una IA no-persecución.
+    // randomizeDirection();
 }
 
 /*
- IA de movimiento aleatorio (solo para nivel 2+)
-*/
+ * IA de movimiento aleatorio (solo para nivel 2+ y si no está en persecución)
+ */
 void Enemigo::randomizeDirection()
 {
     if (numeroNivel == 1)
@@ -290,8 +334,8 @@ void Enemigo::randomizeDirection()
 }
 
 /*
- Saltar si hay obstaculo adelante (solo nivel 2+)
-*/
+ * Saltar si hay obstaculo adelante (solo nivel 2+)
+ */
 void Enemigo::tryJumpIfObstacleAhead()
 {
     if (numeroNivel == 1) return;
@@ -305,15 +349,17 @@ void Enemigo::tryJumpIfObstacleAhead()
 }
 
 /*
- Deteccion de obstaculo justo adelante
-*/
+ * Deteccion de obstaculo justo adelante
+ */
 bool Enemigo::detectarObstaculoAdelante()
 {
     if (!scene()) return false;
 
+    // Distancia de detección (1.5 veces el ancho del enemigo)
     qreal distancia = rect().width() * 1.5;
     qreal dir = mirandoIzquierda ? -1 : 1;
 
+    // Zona de colisión a revisar
     QRectF zona = QRectF(
                       x() + dir * rect().width(),
                       y(),
@@ -332,6 +378,7 @@ bool Enemigo::detectarObstaculoAdelante()
     return false;
 }
 
+// Sobrecarga de tryJump, usada solo si se quisiera un salto aleatorio
 void Enemigo::tryJump()
 {
     if (numeroNivel == 1) return;
@@ -343,7 +390,7 @@ void Enemigo::tryJump()
     }
 }
 
-// *** Lógica de disparo (desde la rama de merge) ***
+// *** Lógica de disparo ***
 void Enemigo::intentarDisparar()
 {
     if (!scene() || !estaVivo()) {
@@ -366,7 +413,7 @@ void Enemigo::dispararProyectil()
     qreal projW = 10;
     qreal projH = 16;
     qreal projSpeed = 8.0;
-    int dirY = 1; // *** HACIA ABAJO ***
+    int dirY = 1; // *** HACIA ABAJO (Nivel 1 es descendente) ***
 
     Proyectil* bala = new Proyectil(projW, projH, projSpeed, dirY);
     bala->setOwner(this);
@@ -382,30 +429,5 @@ void Enemigo::dispararProyectil()
     static int disparoCounter = 0;
     if (disparoCounter++ % 5 == 0) {
         qDebug() << "Enemigo disparó en:" << spawn;
-    }
-}
-void Enemigo::cargarSpritesNivel1()
-{
-    // Ruta y configuracion para EnemigoN1.png
-    QString rutaBase = ":/Recursos/Sprites/EnemigoN1.png";
-
-    if (spriteSheet.load(rutaBase)) {
-        usarSprites = true;
-
-        // ** Configuración para EnemigoN1.png **
-        // Asumiendo que EnemigoN1.png es un solo frame
-        totalFrames = 1;
-        frameActual = 0;
-        // anchoSprite y altoSprite se usan por defecto de las dimensiones del objeto
-
-        if (timerAnimacion) {
-            timerAnimacion->setInterval(100);
-            reanudarAnimacion();
-        }
-
-        qDebug() << "Sprites del Enemigo Nivel 1 cargados:" << rutaBase;
-    } else {
-        qDebug() << "ERROR: No se pudo cargar el sprite del Enemigo Nivel 1:" << rutaBase;
-        usarSprites = false;
     }
 }

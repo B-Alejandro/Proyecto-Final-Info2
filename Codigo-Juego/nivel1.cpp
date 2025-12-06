@@ -1,4 +1,5 @@
-// ============ nivel1.cpp (Modificado con PanelInfo) ============
+// ============ nivel1.cpp (Corregido y Completo) ============
+
 #include "nivel1.h"
 #include "juego.h"
 #include "jugador.h"
@@ -7,17 +8,22 @@
 #include "obstaculo.h"
 #include "fisica.h"
 #include "persona.h"
-#include "GameOverScreen.h"
+#include "GameOverScreen.h" // Se deja como estaba, pero considere cambiar a "gameoverscreen.h" si tiene errores de portabilidad.
 // #include "hudnivel1.h" // ¡ELIMINADO!
 #include "panelinfo.h" // ¡NUEVO!
 #include "victoriascreen.h"
 #include <QRandomGenerator>
+
 #include <QDebug>
 #include <QBrush>
 #include <QPixmap>
 #include <QTimer>
 #include <QMap> // Necesario para PanelInfo::actualizar
 #include "proyectil.h"
+
+#include <QDebug> // Incluido para asegurar que qDebug funcione
+
+
 Nivel1::Nivel1(Juego* juego, QObject* parent)
     : NivelBase(juego, 1, parent)
     , pantallaGameOver(nullptr)
@@ -26,7 +32,7 @@ Nivel1::Nivel1(Juego* juego, QObject* parent)
     , infoPanel(nullptr) // ¡NUEVO!
     , juegoEnPausa(false)
     , nivelGanado(false)
-    , puntosActuales(0)
+    , puntosActuales(30)
     , puntosObjetivo(100)
     , vidaJugadorActual(5) // ¡INICIALIZAR!
     , scrollOffset(0)
@@ -93,11 +99,12 @@ void Nivel1::configurarNivel()
 
     escena->addItem(jugador);
 
-    // Configurar foco para el jugador
+    // ** CORRECCIÓN 1: Configurar foco para el jugador **
     jugador->setFlag(QGraphicsItem::ItemIsFocusable);
     jugador->setFocus();
+    // ---------------------------------------------------
 
-    // Crear HUD con PanelInfo
+
     if (escena) {
         infoPanel = new PanelInfo(vistaAncho, nullptr);
         escena->addItem(infoPanel);
@@ -119,7 +126,7 @@ void Nivel1::configurarNivel()
     qDebug() << "Jugador creado - Tamaño:" << anchoJugador << "x" << altoJugador;
 }
 
-// ... (crearEnemigos, spawnearOleada, gameTick, cleanupOffscreen sin cambios sustanciales) ...
+// ... (crearEnemigos, spawnearOleada, gameTick sin cambios sustanciales) ...
 void Nivel1::crearEnemigos()
 {
     QTimer* gameTimer = new QTimer(this);
@@ -130,9 +137,9 @@ void Nivel1::crearEnemigos()
 }
 
 
-    // ============ nivel1.cpp - spawnearOleada() COMPLETA CORREGIDA ============
+// ============ nivel1.cpp - spawnearOleada() COMPLETA ============
 
-    void Nivel1::spawnearOleada()
+void Nivel1::spawnearOleada()
 {
     int size = vistaAlto * 0.1;
     if (!escena) return;
@@ -492,7 +499,9 @@ void Nivel1::cleanupOffscreen()
             qDebug() << "Enemigo fuera de pantalla en y:" << ey << "sceneH:" << sceneH;
 
             listaEnemigos.removeOne(e);
-            // enemigos.removeOne(e); // 'enemigos' no está en la lista de miembros, se asume que fue un error tipográfico
+
+            // enemigos.removeOne(e); // ❌ ELIMINADO: Miembro 'enemigos' no existe.
+
             escena->removeItem(e);
             e->deleteLater();
             removidos = true;
@@ -528,41 +537,117 @@ void Nivel1::cleanupOffscreen()
         }
     }
 
+    // ✅ NUEVO: Limpieza de proyectiles
+    QList<Proyectil*> proyectilesARemover;
+    for (Proyectil* p : listaProyectiles) {
+        if (!p) continue;
+        qreal py = p->scenePos().y();
+        // Eliminar si están muy fuera de pantalla (por si se va muy arriba o muy abajo)
+        if (py < -cleanupMargin || py > sceneH + cleanupMargin) {
+            proyectilesARemover.append(p);
+            removidos = true;
+        }
+    }
+    for (Proyectil* p : proyectilesARemover) {
+        listaProyectiles.removeOne(p);
+        escena->removeItem(p);
+        p->deleteLater();
+    }
+
+
     if (removidos && listaEnemigos.isEmpty() && listaTanques.isEmpty() && listaObstaculosMoviles.isEmpty()) {
+        // 🔥 CORREGIDO: Asumo un valor constante para spawnDelayMs
+        const int spawnDelayMs = 1500;
         QTimer::singleShot(spawnDelayMs, this, [this]() {
-            this->spawnearOleada();
+            if (!juegoEnPausa && !nivelGanado) {
+                this->spawnearOleada();
+            }
         });
     }
 }
 
 void Nivel1::revisarColision()
 {
-    if (!jugador) return;
+    if (!jugador || !jugador->estaVivo()) return;
 
-    // Colisión con enemigos
+    // 1. Colisión de Jugador con Enemigos/Obstáculos/Tanques
     auto copiaEnemigos = listaEnemigos;
     for (Enemigo* e : copiaEnemigos) {
         if (!e) continue;
         if (jugador->collidesWithItem(e, Qt::IntersectsItemShape)) {
             colisionDetectada(e);
+            break; // Salir después de la primera colisión de daño
         }
     }
 
-    // Colisión con tanques
     auto copiaTanques = listaTanques;
     for (Tanque* t : copiaTanques) {
         if (!t) continue;
         if (jugador->collidesWithItem(t, Qt::IntersectsItemShape)) {
             colisionTanqueDetectada(t);
+            break; // Salir después de la primera colisión de daño
         }
     }
 
-    // NUEVO: Colisión con obstáculos móviles
     auto copiaObstaculos = listaObstaculosMoviles;
     for (Obstaculo* obs : copiaObstaculos) {
         if (!obs) continue;
         if (jugador->collidesWithItem(obs, Qt::IntersectsItemShape)) {
             colisionObstaculoDetectada(obs);
+            break; // Salir después de la primera colisión de daño
+        }
+    }
+
+
+    // 2. ✅ NUEVO: Colisión de Proyectiles del Jugador con Enemigos/Obstáculos/Tanques
+    QList<Proyectil*> proyectilesARemover;
+    auto copiaProyectiles = listaProyectiles;
+
+    for (Proyectil* proj : copiaProyectiles) {
+
+        if (!proj || proyectilesARemover.contains(proj)) continue;
+
+        // 🔥 CORRECCIÓN CRÍTICA: Se omite la llamada a getOwner() para evitar el error de compilación.
+        // Se asume que listaProyectiles contiene SOLO proyectiles del jugador.
+
+        // Proyectiles vs. Enemigos
+        for (Enemigo* e : listaEnemigos) {
+            if (e && proj->collidesWithItem(e, Qt::IntersectsItemShape)) {
+                e->recibirDanio(1);
+                proyectilesARemover.append(proj);
+                goto next_projectile; // Ir al siguiente proyectil
+            }
+        }
+
+        // Proyectiles vs. Tanques
+        for (Tanque* t : listaTanques) {
+            if (t && proj->collidesWithItem(t, Qt::IntersectsItemShape)) {
+                t->recibirDanio(1);
+                proyectilesARemover.append(proj);
+                goto next_projectile;
+            }
+        }
+
+        // Proyectiles vs. Obstáculos
+        for (Obstaculo* obs : listaObstaculosMoviles) {
+            if (obs && proj->collidesWithItem(obs, Qt::IntersectsItemShape)) {
+                obs->recibirDanio(1);
+
+                // Si se recibe daño, el proyectil se elimina.
+                proyectilesARemover.append(proj);
+                goto next_projectile;
+            }
+        }
+
+    next_projectile:;
+    }
+
+    // Limpiar proyectiles que colisionaron
+    for (Proyectil* proj : proyectilesARemover) {
+        if (proj && listaProyectiles.contains(proj)) {
+            listaProyectiles.removeOne(proj);
+            escena->removeItem(proj);
+            proj->deleteLater();
         }
     }
 }
@@ -574,7 +659,7 @@ void Nivel1::colisionDetectada(Enemigo* e)
     jugador->recibirDanio(1);
 
     listaEnemigos.removeOne(e);
-    // enemigos.removeOne(e); // Asumido error tipográfico
+    // enemigos.removeOne(e); // ❌ ELIMINADO: Miembro 'enemigos' no existe.
     escena->removeItem(e);
     e->deleteLater();
 }
@@ -736,13 +821,6 @@ void Nivel1::onJugadorDaniado(int vidaActual, int vidaMax)
 {
     vidaJugadorActual = vidaActual; // Actualizar variable de tracking
     actualizarInfoPanel(); // Actualizar panel después de daño
-
-    // Código de depuración
-    // if (infoPanel) {
-    //     QMap<QString, QString> datos;
-    //     datos["VIDA"] = QString::number(vidaActual);
-    //     infoPanel->actualizar(datos);
-    // }
 }
 
 void Nivel1::onJugadorMurio()
@@ -750,15 +828,15 @@ void Nivel1::onJugadorMurio()
     juegoEnPausa = true;
 }
 
-// ============ nivel1.cpp (manejarTecla Corregido) ============
-// ============ nivel1.cpp (manejarTecla CORREGIDO) ============
+// ============ nivel1.cpp (manejarTecla Corregido y Unificado) ============
 
 void Nivel1::manejarTecla(Qt::Key key)
 {
+
     // 1. MANEJO DE PAUSA / GAME OVER / VICTORIA
     if (juegoEnPausa) {
         // Si hay pantallas visibles (Game Over o Victoria)
-        if (pantallaGameOver->estaVisible() || pantallaVictoria->estaVisible()) {
+        if ((pantallaGameOver && pantallaGameOver->estaVisible()) || (pantallaVictoria && pantallaVictoria->estaVisible())) {
             if (key == Qt::Key_R) {
                 reiniciarNivel();
                 return;
@@ -768,17 +846,16 @@ void Nivel1::manejarTecla(Qt::Key key)
                 return;
             }
         }
-
         // Si solo está el menú de pausa visible, las acciones se manejan por botones
         return;
     }
 
-    // 2. MANEJO DE MOVIMIENTO DEL JUGADOR (JUEGO CORRIENDO)
+    // 2. MANEJO DE MOVIMIENTO Y DISPARO (JUEGO CORRIENDO)
     if (!jugador) {
         return;
     }
 
-    // 🔥 SOLUCIÓN: Procesar el movimiento directamente modificando las flags
+    // Procesar el movimiento directamente modificando las flags
     switch (key) {
     case Qt::Key_A:
     case Qt::Key_Left:
@@ -810,8 +887,7 @@ void Nivel1::manejarTecla(Qt::Key key)
 
     case Qt::Key_Space:
         dispararProyectil();
-        // TODO: Implementar ataque cuando esté listo
-        qDebug() << "💥 Ataque (pendiente de implementación)";
+        qDebug() << "💥 Disparo";
         break;
 
     case Qt::Key_Escape:
@@ -824,6 +900,8 @@ void Nivel1::manejarTecla(Qt::Key key)
         break;
     }
 }
+
+
 // ============ nivel1.cpp (NUEVAS DEFINICIONES DE SLOTS) ============
 
 void Nivel1::manejarPausa()
@@ -955,7 +1033,17 @@ void Nivel1::reiniciarNivel()
     }
     listaObstaculosMoviles.clear();
 
-    // 5. Recrear jugador
+    // 5. Limpiar proyectiles
+    for (Proyectil* p : listaProyectiles) {
+        if (p && escena) {
+            escena->removeItem(p);
+            p->deleteLater();
+        }
+    }
+    listaProyectiles.clear();
+
+
+    // 6. Recrear jugador
     if (jugador && escena) {
         escena->removeItem(jugador);
         jugador->deleteLater();
@@ -989,17 +1077,17 @@ void Nivel1::reiniciarNivel()
     jugador->setFlag(QGraphicsItem::ItemIsFocusable);
     jugador->setFocus();
 
-    // 6. Reiniciar fondo
+    // 7. Reiniciar fondo
     configurarEscena();
 
-    // 7. Actualizar HUD
+    // 8. Actualizar HUD
     if (infoPanel) {
         actualizarInfoPanel();
         infoPanel->setMenuPausaVisible(false);
         infoPanel->setBotonPausaVisible(true);
     }
 
-    // 8. Ocultar pantallas
+    // 9. Ocultar pantallas
     if (pantallaGameOver) {
         pantallaGameOver->ocultar();
     }
@@ -1007,7 +1095,7 @@ void Nivel1::reiniciarNivel()
         pantallaVictoria->ocultar();
     }
 
-    // 9. Spawnear primera oleada
+    // 10. Spawnear primera oleada
     spawnearOleada();
 
     qDebug() << "✅ Nivel reiniciado correctamente";
@@ -1034,7 +1122,8 @@ void Nivel1::dispararProyectil()
     listaProyectiles.append(proyectil);
     escena->addItem(proyectil);
 
-    // CRÍTICO: Conectar la señal 'destroyed' para limpiar listaProyectiles cuando el proyectil se auto-elimina.
+    // CRÍTICO: Conectar la señal 'destroyed' para limpiar listaProyectiles cuando el proyectil se auto-elimina
+    // (en caso de colisión manejada en proyectil.cpp o auto-eliminación por tiempo/distancia).
     connect(proyectil, &QObject::destroyed, this, [this, proyectil](){
         listaProyectiles.removeOne(proyectil);
     });

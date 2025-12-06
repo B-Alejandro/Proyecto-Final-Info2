@@ -4,17 +4,20 @@
 #include "nivelbase.h"
 #include <QList>
 #include <QTimer>
-#include <QElapsedTimer> // Necesario para danoObstaculoTimer y tiempoJugado
+#include <QElapsedTimer>
 #include <QGraphicsPixmapItem>
-
-// INCLUSIONES CRÍTICAS
-#include "victoriascreen.h"
-#include "persona.h"
 #include <QWidget>
 #include <QLabel>
-#include "gameoverscreen.h" // <-- CORRECCIÓN CASE-SENSITIVITY (Minúsculas)
+#include "persona.h"
 
-// Declaraciones adelantadas...
+// INCLUSIONES CRÍTICAS
+#include "gameoverscreen.h"
+#include "victoriascreen.h" // Incluido para la lógica de victoria/fin del juego
+
+// Declaraciones adelantadas
+class Juego;
+class Enemigo;
+class Obstaculo;
 
 class Nivel2 : public NivelBase
 {
@@ -24,16 +27,17 @@ public:
     Nivel2(Juego* juego, QObject* parent = nullptr);
     ~Nivel2() override;
 
-    void manejarTecla(Qt::Key key) ;
+    // Métodos públicos para la comunicación externa
+    void manejarTecla(Qt::Key key);
     bool estaEnGameOver() const;
-    bool estaEnVictoria() const { return nivelGanado; }
+    bool estaEnVictoria() const { return nivelGanado; } // Propiedad de HEAD
 
 protected:
     void configurarNivel() override;
     void crearEnemigos() override;
     void crearObstaculos() override;
     void actualizar() override;
-    void reiniciarNivel();
+    void reiniciarNivel(); // Método presente en HEAD
 
 signals:
     void juegoTerminado();
@@ -42,24 +46,31 @@ signals:
 private slots:
     void onJuegoTerminado();
     void verificarVictoriaPorTiempo();
-    void onEnemyDied(Persona* p); // <-- Declaración del slot que faltaba implementar
+    void onEnemyDied(Persona* p); // Declaración del slot que maneja la muerte de cualquier Persona (como enemigo)
 
 private:
-    // ... (Métodos auxiliares)
+    // --- Gestión de Corredor Infinito Triple (Métodos auxiliares) ---
+    void crearFondoDinamico();
+    void actualizarFondo(qreal posicionJugador);
+    void crearSueloTriple();
+    void actualizarSuelo(qreal posicionJugador);
+    void spawnearObstaculoAleatorio();
+    void limpiarObstaculosLejanos();
+    void reposicionarEscena();
 
     // ================================================================
-    // ** MIEMBROS DE ESTADO Y UI (Reordenados para -Wreorder-ctor) **
+    // ** MIEMBROS DE ESTADO Y UI (Reordenados para evitar -Wreorder) **
     // ================================================================
     GameOverScreen* pantallaGameOver;
     VictoriaScreen* pantallaVictoria;
-    QTimer* timerVictoria;
+    QTimer* timerVictoria; // Timer para la lógica de victoria por tiempo
 
     bool juegoEnPausa;
     bool nivelGanado;
 
     // Timers de juego y cooldown
     QElapsedTimer danoObstaculoTimer;
-    QElapsedTimer tiempoJugado; // <-- Variable declarada para el error anterior
+    QElapsedTimer tiempoJugado;
 
     // Elementos del HUD
     QWidget* hudWidget;
@@ -75,6 +86,7 @@ private:
     Obstaculo* suelo1;
     Obstaculo* suelo2;
     Obstaculo* suelo3;
+    QList<Obstaculo*> obstaculos;
 
     QGraphicsPixmapItem* fondo1;
     QGraphicsPixmapItem* fondo2;
@@ -88,17 +100,6 @@ private:
     qreal distanciaEntreObstaculos;
     qreal ultimaPosicionSpawn;
     int contadorObstaculos;
-private:
-    // ** CORRECCIÓN 1: Agregar los métodos auxiliares faltantes **
-    // --- Gestión de Corredor Infinito Triple (Métodos auxiliares) ---
-    void crearFondoDinamico();
-    void actualizarFondo(qreal posicionJugador);
-    void crearSueloTriple();
-    void actualizarSuelo(qreal posicionJugador);
-    void spawnearObstaculoAleatorio();
-    void limpiarObstaculosLejanos();
-    void reposicionarEscena();
-    // Métodos de colisión...
 };
 
 #endif // NIVEL2_H

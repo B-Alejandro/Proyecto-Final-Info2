@@ -7,12 +7,15 @@
 #include <QPixmap>
 #include <QRectF>
 #include <QObject> // Asegurar que QObject está incluido
+#include <QPainter> // Necesario para QPainter en paint()
+#include <QStyleOptionGraphicsItem>
+#include <QWidget>
 
 /*
- Persona.h
- Clase base para entidades con movimiento, fisica y animacion por sprites.
- Esta version declara boundingRect() para evitar warnings y errores de definicion fuera de linea.
-*/
+ * Persona.h
+ * Clase base para entidades con movimiento, fisica y animacion por sprites.
+ * Esta version declara boundingRect() para evitar warnings y errores de definicion fuera de linea.
+ */
 
 enum class TipoMovimiento {
     RECTILINEO,
@@ -86,8 +89,6 @@ signals:
     void died(Persona* who);
 
 protected:
-
-
     // paint renderiza el sprite
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget) override;
 

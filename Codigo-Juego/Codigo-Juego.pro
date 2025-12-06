@@ -6,7 +6,9 @@ CONFIG += qt
 
 SOURCES += \
     Obstaculo.cpp \
+    coleccionable.cpp \
     enemigo.cpp \
+    enemigointeligente.cpp \
     explosion.cpp \
     fisica.cpp \
     gameoverscreen.cpp \
@@ -20,6 +22,7 @@ SOURCES += \
     nivelbase.cpp \
     persona.cpp \
     proyectil.cpp \
+    proyectilinteligente.cpp \
     proyectiltanque.cpp \
     tanque.cpp \
     victoriascreen.cpp \
@@ -27,7 +30,9 @@ SOURCES += \
     panelinfo.cpp
 HEADERS += \
     Obstaculo.h \
+    coleccionable.h \
     enemigo.h \
+    enemigointeligente.h \
     explosion.h \
     fisica.h \
     gameoverscreen.h \
@@ -40,6 +45,7 @@ HEADERS += \
     nivelbase.h \
     persona.h \
     proyectil.h \
+    proyectilinteligente.h \
     proyectiltanque.h \
     tanque.h \
     victoriascreen.h \
