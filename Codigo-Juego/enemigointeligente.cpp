@@ -7,7 +7,7 @@
 
 /*
   Constructor
-  Inicializa el enemigo inteligente con su sistema progresivo
+  Torreta estática que dispara desde el inicio
 */
 EnemigoInteligente::EnemigoInteligente(qreal w,
                                        qreal h,
@@ -21,28 +21,19 @@ EnemigoInteligente::EnemigoInteligente(qreal w,
     , jugadorDetectado(false)
     , jugadorDetectadoAnterior(false)
     , contadorDetecciones(0)
-    , modoPersecucion(false)
-    , modoFrancotirador(false)
-    , velocidadOriginal(0)
-    , intervaloDisparo(2000)
+    , intervaloDisparo(3000)      // Inicia lento (3 segundos)
+    , cantidadProyectiles(1)      // Inicia con 1 proyectil
     , areaDeteccionVisual(nullptr)
     , mostrarArea(false)
 {
-    // Guardar velocidad original (debe ser 0 para estático)
-    velocidadOriginal = 0;
+    // Configurar como 100% ESTÁTICO
     speed = 0;
-
-    // *** CRÍTICO: Configurar para que NO use la lógica de Enemigo base ***
-    // Marcar como NO activo para que no use handleInput() de Enemigo
-    // (Enemigo tiene una variable enemigoActivo que controla esto)
-
-    // *** IMPORTANTE: Detener comportamiento aleatorio del padre ***
     upPressed = false;
     downPressed = false;
     leftPressed = false;
     rightPressed = false;
 
-    // Crear el área visual de detección (invisible por defecto)
+    // Crear área visual
     areaDeteccionVisual = new QGraphicsEllipseItem(
         -radioDeteccion,
         -radioDeteccion,
@@ -51,18 +42,18 @@ EnemigoInteligente::EnemigoInteligente(qreal w,
         this
         );
 
-    // Configurar estilo del área visual
     areaDeteccionVisual->setPen(QPen(QColor(255, 0, 0, 100), 2, Qt::DashLine));
     areaDeteccionVisual->setBrush(QBrush(QColor(255, 0, 0, 30)));
     areaDeteccionVisual->setZValue(-1);
     areaDeteccionVisual->setVisible(false);
 
-    // Crear timer de disparo
+    // Timer de disparo - INICIA INMEDIATAMENTE
     timerDisparo = new QTimer(this);
-    connect(timerDisparo, &QTimer::timeout, this, &EnemigoInteligente::dispararAObjetivo);
+    connect(timerDisparo, &QTimer::timeout, this, &EnemigoInteligente::dispararProyectiles);
+    timerDisparo->start(intervaloDisparo);
 
-    qDebug() << "EnemigoInteligente creado con radio:" << radioDeteccion;
-    qDebug() << "  Velocidad inicial:" << speed << "(estático)";
+    qDebug() << "Torreta creada - Radio:" << radioDeteccion
+             << "Disparo inicial:" << intervaloDisparo << "ms";
 }
 
 EnemigoInteligente::~EnemigoInteligente()
@@ -120,21 +111,30 @@ Jugador* EnemigoInteligente::obtenerJugador()
 }
 
 /*
-  Actualización por frame
-  Verifica si el jugador está en el área y reacciona progresivamente
+  Override de handleInput - Forzar que sea 100% estático
+*/
+void EnemigoInteligente::handleInput()
+{
+    // SIEMPRE estático - sin movimiento bajo ninguna circunstancia
+    upPressed = false;
+    downPressed = false;
+    leftPressed = false;
+    rightPressed = false;
+    speed = 0;
+}
+
+/*
+  Actualización por frame - Solo detecta, NO se mueve
 */
 void EnemigoInteligente::advance(int phase)
 {
     if (!phase) return;
 
-    // *** NO llamar a Enemigo::advance() para evitar su lógica ***
-    // En su lugar, llamamos directamente a Persona::advance()
-    // que maneja el movimiento básico
+    // NO llamar a Enemigo::advance() para evitar cualquier movimiento
 
-    // Verificar detección del jugador
+    // Solo detectar jugador
     jugadorDetectado = detectarJugador();
 
-    // Detectar cambios de estado (entrada/salida del área)
     if (jugadorDetectado && !jugadorDetectadoAnterior) {
         onJugadorDetectado();
     }
@@ -142,62 +142,7 @@ void EnemigoInteligente::advance(int phase)
         onJugadorPerdido();
     }
 
-    // Guardar estado para el siguiente frame
     jugadorDetectadoAnterior = jugadorDetectado;
-}
-
-/*
-  Override de handleInput para persecución inteligente
-*/
-void EnemigoInteligente::handleInput()
-{
-    // Si no está en modo persecución, no hacer nada (comportamiento base)
-    if (!modoPersecucion) {
-        // Mantener quieto (modo estático)
-        upPressed = false;
-        downPressed = false;
-        leftPressed = false;
-        rightPressed = false;
-        return;
-    }
-
-    // MODO PERSECUCIÓN ACTIVO
-    Jugador* jugador = obtenerJugador();
-    if (!jugador) return;
-
-    // Calcular dirección hacia el jugador
-    qreal dx = jugador->x() - x();
-    qreal dy = jugador->y() - y();
-
-    // Movimiento horizontal
-    if (std::abs(dx) > 10) {  // Margen de error de 10 píxeles
-        if (dx > 0) {
-            rightPressed = true;
-            leftPressed = false;
-            mirandoIzquierda = false;
-        } else {
-            leftPressed = true;
-            rightPressed = false;
-            mirandoIzquierda = true;
-        }
-    } else {
-        leftPressed = false;
-        rightPressed = false;
-    }
-
-    // Movimiento vertical
-    if (std::abs(dy) > 10) {
-        if (dy > 0) {
-            downPressed = true;
-            upPressed = false;
-        } else {
-            upPressed = true;
-            downPressed = false;
-        }
-    } else {
-        upPressed = false;
-        downPressed = false;
-    }
 }
 
 /*
@@ -230,160 +175,100 @@ bool EnemigoInteligente::detectarJugador()
 
 /*
   ════════════════════════════════════════════════════════════
-  🎯 EVENTO: JUGADOR DETECTADO
+  🎯 EVENTO: JUGADOR DETECTADO - AUMENTAR AGRESIVIDAD
   ════════════════════════════════════════════════════════════
-  Sistema progresivo que escala con el número de detecciones:
-  - Detecciones 1-3: Modo persecución (más lento que el jugador)
-  - Detecciones 4+: Modo francotirador (dispara proyectiles)
 */
 void EnemigoInteligente::onJugadorDetectado()
 {
-    // Incrementar contador
     contadorDetecciones++;
 
     qDebug() << "\n╔══════════════════════════════════════════════════════╗";
     qDebug() << "║  🔴 JUGADOR DETECTADO - Detección #" << contadorDetecciones << "               ║";
     qDebug() << "╚══════════════════════════════════════════════════════╝";
 
-    // ════════════════════════════════════════════════════════════
-    // FASE 1: PERSECUCIÓN (Detecciones 1-3)
-    // ════════════════════════════════════════════════════════════
-    if (contadorDetecciones <= 3) {
-        qDebug() << "   📊 Modo: PERSECUCIÓN";
-        qDebug() << "   🏃 El enemigo te seguirá (velocidad reducida)";
-        qDebug() << "   💡 Consejo: ¡Aléjate del círculo rojo!";
-
-        activarPersecucion();
-
-        // Cambiar color a naranja (persecución)
-        setBrush(QBrush(QColor(255, 165, 0)));
-
-        // Cambiar color del área a naranja
-        if (areaDeteccionVisual) {
-            areaDeteccionVisual->setPen(QPen(QColor(255, 165, 0, 120), 2, Qt::DashLine));
-            areaDeteccionVisual->setBrush(QBrush(QColor(255, 165, 0, 40)));
-        }
-    }
-
-    // ════════════════════════════════════════════════════════════
-    // FASE 2: FRANCOTIRADOR (Detecciones 4+)
-    // ════════════════════════════════════════════════════════════
-    else {
-        qDebug() << "   📊 Modo: FRANCOTIRADOR";
-        qDebug() << "   🎯 El enemigo dispará proyectiles a tu posición!";
-        qDebug() << "   ⚠️  PELIGRO: ¡Mantente en movimiento!";
-
-        activarModoFrancotirador();
-
-        // Cambiar color a rojo intenso (peligro)
-        setBrush(QBrush(QColor(200, 0, 0)));
-
-        // Cambiar color del área a rojo intenso
-        if (areaDeteccionVisual) {
-            areaDeteccionVisual->setPen(QPen(QColor(200, 0, 0, 150), 3, Qt::SolidLine));
-            areaDeteccionVisual->setBrush(QBrush(QColor(200, 0, 0, 60)));
-        }
-    }
+    actualizarAgresividad();
 
     qDebug() << "   📍 Posición detectada:" << ultimaPosicionJugador;
     qDebug() << "";
 }
 
-/*
-  Evento: Jugador perdido (sale del área)
-*/
 void EnemigoInteligente::onJugadorPerdido()
 {
     qDebug() << "\n╔══════════════════════════════════════════════════════╗";
-    qDebug() << "║  🟢 JUGADOR PERDIDO - Volviendo a vigilancia        ║";
-    qDebug() << "╚══════════════════════════════════════════════════════╝";
-    qDebug() << "   📊 Total de detecciones:" << contadorDetecciones;
-    qDebug() << "";
-
-    // Desactivar comportamientos activos
-    if (modoPersecucion) {
-        desactivarPersecucion();
-    }
-
-    if (modoFrancotirador) {
-        timerDisparo->stop();
-        modoFrancotirador = false;
-    }
-
-    // Volver a color original (azul)
-    setBrush(QBrush(QColor(100, 100, 255)));
-
-    // Restaurar color del área
-    if (areaDeteccionVisual) {
-        areaDeteccionVisual->setPen(QPen(QColor(255, 0, 0, 100), 2, Qt::DashLine));
-        areaDeteccionVisual->setBrush(QBrush(QColor(255, 0, 0, 30)));
-    }
+    qDebug() << "║  🟢 JUGADOR PERDIDO - Total detecciones:" << contadorDetecciones << "         ║";
+    qDebug() << "╚══════════════════════════════════════════════════════╝\n";
 }
 
 /*
-  ════════════════════════════════════════════════════════════
-  🏃 MODO PERSECUCIÓN
-  ════════════════════════════════════════════════════════════
+  Actualiza agresividad según detecciones
 */
-void EnemigoInteligente::activarPersecucion()
+void EnemigoInteligente::actualizarAgresividad()
 {
-    if (modoPersecucion) return;
+    // Detener timer actual
+    timerDisparo->stop();
 
-    modoPersecucion = true;
+    if (contadorDetecciones == 1) {
+        // NIVEL 1: Lento - 3s, 1 proyectil
+        intervaloDisparo = 3000;
+        cantidadProyectiles = 1;
+        setBrush(QBrush(QColor(100, 100, 255)));  // Azul
 
-    // *** CRÍTICO: Establecer velocidad de persecución ***
-    // Como el enemigo es estático (velocidad original = 0),
-    // necesitamos darle una velocidad base para perseguir
-    // Debe ser menor que la del jugador (jugador tiene 7.0)
-    speed = 4.0;  // 60% aproximado de 7.0
+        if (areaDeteccionVisual) {
+            areaDeteccionVisual->setPen(QPen(QColor(100, 100, 255, 120), 2, Qt::DashLine));
+            areaDeteccionVisual->setBrush(QBrush(QColor(100, 100, 255, 40)));
+        }
 
-    qDebug() << "   ✓ Persecución activada - Velocidad:" << speed;
-}
+        qDebug() << "   📊 NIVEL 1: Disparo lento (3s) - 1 proyectil";
+    }
+    else if (contadorDetecciones == 2) {
+        // NIVEL 2: Normal - 2s, 1 proyectil
+        intervaloDisparo = 2000;
+        cantidadProyectiles = 1;
+        setBrush(QBrush(QColor(255, 165, 0)));  // Naranja
 
-void EnemigoInteligente::desactivarPersecucion()
-{
-    if (!modoPersecucion) return;
+        if (areaDeteccionVisual) {
+            areaDeteccionVisual->setPen(QPen(QColor(255, 165, 0, 120), 2, Qt::DashLine));
+            areaDeteccionVisual->setBrush(QBrush(QColor(255, 165, 0, 40)));
+        }
 
-    modoPersecucion = false;
+        qDebug() << "   📊 NIVEL 2: Disparo normal (2s) - 1 proyectil";
+    }
+    else if (contadorDetecciones == 3) {
+        // NIVEL 3: Rápido - 1.5s, 2 proyectiles
+        intervaloDisparo = 1500;
+        cantidadProyectiles = 2;
+        setBrush(QBrush(QColor(255, 100, 0)));  // Naranja oscuro
 
-    // Volver a velocidad 0 (estático)
-    speed = 0;
+        if (areaDeteccionVisual) {
+            areaDeteccionVisual->setPen(QPen(QColor(255, 100, 0, 140), 3, Qt::SolidLine));
+            areaDeteccionVisual->setBrush(QBrush(QColor(255, 100, 0, 50)));
+        }
 
-    // Detener movimiento
-    upPressed = false;
-    downPressed = false;
-    leftPressed = false;
-    rightPressed = false;
+        qDebug() << "   📊 NIVEL 3: Disparo rápido (1.5s) - 2 proyectiles";
+    }
+    else {
+        // NIVEL 4+: Muy rápido - 1s, 3 proyectiles
+        intervaloDisparo = 1000;
+        cantidadProyectiles = 3;
+        setBrush(QBrush(QColor(200, 0, 0)));  // Rojo intenso
 
-    qDebug() << "   ✓ Persecución desactivada - Volviendo a modo estático";
-}
+        if (areaDeteccionVisual) {
+            areaDeteccionVisual->setPen(QPen(QColor(200, 0, 0, 200), 4, Qt::SolidLine));
+            areaDeteccionVisual->setBrush(QBrush(QColor(200, 0, 0, 70)));
+        }
 
-/*
-  ════════════════════════════════════════════════════════════
-  🎯 MODO FRANCOTIRADOR
-  ════════════════════════════════════════════════════════════
-*/
-void EnemigoInteligente::activarModoFrancotirador()
-{
-    if (modoFrancotirador) return;
-
-    modoFrancotirador = true;
-
-    // Desactivar persecución si estaba activa
-    if (modoPersecucion) {
-        desactivarPersecucion();
+        qDebug() << "   📊 NIVEL 4+: Disparo MUY rápido (1s) - 3 proyectiles";
+        qDebug() << "   ⚠️  ¡MÁXIMO PELIGRO!";
     }
 
-    // Iniciar disparos automáticos cada 2 segundos
+    // Reiniciar timer con nuevo intervalo
     timerDisparo->start(intervaloDisparo);
-
-    qDebug() << "   ✓ Modo francotirador activado - Disparo cada" << intervaloDisparo << "ms";
 }
 
 /*
-  Dispara un proyectil hacia la última posición conocida del jugador
+  Dispara múltiples proyectiles según agresividad
 */
-void EnemigoInteligente::dispararAObjetivo()
+void EnemigoInteligente::dispararProyectiles()
 {
     if (!scene() || !estaVivo()) {
         timerDisparo->stop();
@@ -393,25 +278,30 @@ void EnemigoInteligente::dispararAObjetivo()
     Jugador* jugador = obtenerJugador();
     if (!jugador) return;
 
-    // Calcular punto de inicio (centro del enemigo)
     QPointF centroEnemigo = scenePos() +
                             QPointF(boundingRect().width() / 2,
                                     boundingRect().height() / 2);
 
-    qDebug() << "   🔫 DISPARANDO proyectil inteligente";
-    qDebug() << "      Desde:" << centroEnemigo;
-    qDebug() << "      Hacia:" << ultimaPosicionJugador;
+    qDebug() << "   🔫 DISPARANDO" << cantidadProyectiles << "proyectil(es)";
 
-    // Crear proyectil inteligente direccional
-    ProyectilInteligente* proyectil = new ProyectilInteligente(
-        centroEnemigo,           // Punto de inicio
-        ultimaPosicionJugador,   // Punto objetivo
-        8.0,                     // Velocidad
-        1                        // Daño (1 vida)
-        );
+    // Disparar múltiples proyectiles con ligera variación angular
+    for (int i = 0; i < cantidadProyectiles; ++i) {
+        QPointF objetivo = ultimaPosicionJugador;
 
-    proyectil->setOwner(this);
-    scene()->addItem(proyectil);
+        // Si hay múltiples proyectiles, dispersarlos ligeramente
+        if (cantidadProyectiles > 1) {
+            qreal desviacion = (i - cantidadProyectiles / 2.0) * 30.0;  // 30px de separación
+            objetivo.setX(objetivo.x() + desviacion);
+        }
 
-    qDebug() << "      ✓ Proyectil creado";
+        ProyectilInteligente* proyectil = new ProyectilInteligente(
+            centroEnemigo,
+            objetivo,
+            8.0,  // Velocidad
+            1     // Daño
+            );
+
+        proyectil->setOwner(this);
+        scene()->addItem(proyectil);
+    }
 }
