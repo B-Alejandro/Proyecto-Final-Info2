@@ -20,6 +20,7 @@ class Nivel2 : public NivelBase
     Q_OBJECT
 
 public:
+
     Nivel2(Juego* juego, QObject* parent = nullptr);
     ~Nivel2() override;
 

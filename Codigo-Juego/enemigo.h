@@ -34,7 +34,7 @@ public:
       Carga sprites del enemigo y calcula frames.
     */
     void cargarSprites();
-
+    void cargarSpritesNivel1();
     /*
       Activa animacion de muerte y detiene movimiento.
     */

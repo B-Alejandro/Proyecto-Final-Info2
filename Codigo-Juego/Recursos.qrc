@@ -7,10 +7,8 @@
         <file>Recursos/Sprites/Attacck.png</file>
         <file>Recursos/Sprites/Soldier_Idle.png</file>
         <file>Recursos/Sprites/Idle_homeless.png</file>
-
         <file>Recursos/Backgrounds/unnamed (1).jpg</file>
         <file>Recursos/Backgrounds/tierra.jpg</file>
-
         <file>Recursos/Objects/Obstaculos1.png</file>
         <file>Recursos/Objects/Obstaculos2.png</file>
         <file>Recursos/Objects/D_Obstaculo1.png</file>
@@ -18,5 +16,15 @@
         <file>Recursos/Objects/D-Obstaculo3.png</file>
         <file>Recursos/Objects/ND-Obstaculo3.png</file>
         <file>Recursos/Objects/Rocas.png</file>
+        <file>Recursos/OtrosRecursos/sound-off.png</file>
+        <file>Recursos/OtrosRecursos/sound-on.png</file>
+        <file>Recursos/FuentesLetra/REVISTA.ttf</file>
+        <file>Recursos/Backgrounds/Fondo.jpg</file>
+        <file>Recursos/Backgrounds/PERIDOIC-removebg-preview.png</file>
+        <file>Recursos/Tanque/canion.png</file>
+        <file>Recursos/Tanque/Tanque.png</file>
+        <file>Recursos/Backgrounds/Calle.png</file>
+        <file>Recursos/Sprites/JugadorNivel1.png</file>
+        <file>Recursos/Sprites/EnemigoN1.png</file>
     </qresource>
 </RCC>

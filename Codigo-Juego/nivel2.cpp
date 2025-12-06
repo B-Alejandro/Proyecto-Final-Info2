@@ -84,6 +84,7 @@ bool Nivel2::estaEnGameOver() const
 // ====================================================================
 void Nivel2::crearFondoDinamico()
 {
+    // ... (resto de crearFondoDinamico sin cambios)
     QPixmap fondoPixmap(":/Recursos/Backgrounds/unnamed (1).jpg");
     int sceneH = this->sceneH;
 
@@ -94,8 +95,9 @@ void Nivel2::crearFondoDinamico()
     } else {
         fondoPixmap = fondoPixmap.scaledToHeight(sceneH, Qt::SmoothTransformation);
 
-        // *** CORRECCIÓN: AUMENTAR ANCHO DEL FONDO PARA COBERTURA EXTREMA (x5) ***
-        int anchoDeseado = static_cast<int>(vistaAncho * 5.0);
+        // *** AUMENTAR ANCHO DEL FONDO PARA MAYOR COBERTURA ***
+        // Usar 2.5 vistas en lugar de 2 para mejor overlap
+        int anchoDeseado = static_cast<int>(vistaAncho * 2.5);
 
         if (fondoPixmap.width() < anchoDeseado) {
             QPixmap fondoExtendido(anchoDeseado, fondoPixmap.height());
@@ -149,75 +151,77 @@ void Nivel2::crearFondoDinamico()
 
     qDebug() << "Sistema de fondo TRIPLE creado. Ancho de cada fondo:" << anchoFondo;
 }
+
 void Nivel2::actualizarFondo(qreal posicionJugador)
 {
+    Q_UNUSED(posicionJugador); // <-- CORRECCIÓN: Evita el warning de parámetro no utilizado.
+
     if (!fondo1 || !fondo2 || !fondo3 || anchoFondo <= 0) return;
 
-    // Factor de parallax: 0.05 significa que el fondo se mueve al 5% de la velocidad de la cámara
-    qreal factorParallax = 0.05;
+    qreal factorParallax = 0.3; // 30% de velocidad (el fondo se mueve más lento)
+    qreal posicionCamara = jugador->x();
 
-    // Calcular el desplazamiento de la cámara desde el origen
-    qreal centroVistaX = posicionJugador;
-    qreal desplazamientoCamara = centroVistaX - (vistaAncho * 0.5);
+    // 1. Calcular el desplazamiento parallax basado en la posición de la cámara
+    qreal desplazamientoCamara = posicionCamara - vistaAncho * 0.5;
+    qreal desplazamientoParallax = desplazamientoCamara * (1.0 - factorParallax);
 
-    // El fondo se desplaza más lento: solo se mueve un % del desplazamiento de la cámara
-    qreal desplazamientoFondo = desplazamientoCamara * factorParallax;
+    // 2. Aplicar el desplazamiento parallax a cada fondo
+    fondo1->setX(0 - desplazamientoParallax);
+    fondo2->setX(anchoFondo - desplazamientoParallax);
+    fondo3->setX(anchoFondo * 2 - desplazamientoParallax);
 
-    QGraphicsPixmapItem* items[] = {fondo1, fondo2, fondo3};
+    // 3. Sistema de bucle infinito con reposicionamiento suave
+    qreal limiteIzquierdo = posicionCamara - vistaAncho * 1.5;
 
-    // Encontrar el elemento más a la izquierda y más a la derecha
-    QGraphicsPixmapItem* itemIzquierda = fondo1;
-    QGraphicsPixmapItem* itemDerecha = fondo1;
-    qreal minX = fondo1->x();
-    qreal maxX = fondo1->x();
+    // Obtener las posiciones actuales
+    qreal pos1 = fondo1->x();
+    qreal pos2 = fondo2->x();
+    qreal pos3 = fondo3->x();
 
-    for (QGraphicsPixmapItem* item : items) {
-        qreal posX = item->x();
-        if (posX < minX) {
-            minX = posX;
-            itemIzquierda = item;
-        }
-        if (posX > maxX) {
-            maxX = posX;
-            itemDerecha = item;
-        }
+    // Determinar cuál es el fondo más a la derecha (sin usar qMax encadenado)
+    qreal maxPosActual = pos1;
+    if (pos2 > maxPosActual) maxPosActual = pos2;
+    if (pos3 > maxPosActual) maxPosActual = pos3;
+
+    // Reposicionar cada fondo que sale del límite izquierdo
+    if (pos1 + anchoFondo < limiteIzquierdo) {
+        qreal nuevaPos = maxPosActual + anchoFondo;
+        fondo1->setX(nuevaPos);
+
+        // Recalcular máximo después de mover fondo1
+        maxPosActual = nuevaPos;
+        if (pos2 > maxPosActual) maxPosActual = pos2;
+        if (pos3 > maxPosActual) maxPosActual = pos3;
     }
 
-    // Aplicar el desplazamiento de parallax a todos los elementos
-    for (QGraphicsPixmapItem* item : items) {
-        item->setX(desplazamientoFondo);
+    if (pos2 + anchoFondo < limiteIzquierdo) {
+        qreal nuevaPos = maxPosActual + anchoFondo;
+        fondo2->setX(nuevaPos);
+
+        // Recalcular máximo después de mover fondo2
+        maxPosActual = nuevaPos;
+        if (pos1 > maxPosActual) maxPosActual = pos1;
+        if (pos3 > maxPosActual) maxPosActual = pos3;
     }
 
-    // Verificar si necesitamos hacer el bucle infinito
-    // Si el borde derecho del elemento más a la izquierda está fuera de la vista por la izquierda
-    qreal bordeDerechoIzquierda = itemIzquierda->x() + anchoFondo;
-    qreal bordeIzquierdoVista = centroVistaX - (vistaAncho * 0.5);
-
-    if (bordeDerechoIzquierda < bordeIzquierdoVista) {
-        // Mover el elemento izquierdo al final (después del elemento más a la derecha)
-        itemIzquierda->setX(itemDerecha->x() + anchoFondo);
-    }
-
-    // También verificar el caso contrario (movimiento hacia atrás)
-    qreal bordeIzquierdoDerecha = itemDerecha->x();
-    qreal bordeDerechoVista = centroVistaX + (vistaAncho * 0.5);
-
-    if (bordeIzquierdoDerecha > bordeDerechoVista) {
-        // Mover el elemento derecho al inicio (antes del elemento más a la izquierda)
-        itemDerecha->setX(itemIzquierda->x() - anchoFondo);
+    if (pos3 + anchoFondo < limiteIzquierdo) {
+        qreal nuevaPos = maxPosActual + anchoFondo;
+        fondo3->setX(nuevaPos);
     }
 }
+
 // ====================================================================
 // GESTIÓN DE SUELO - SISTEMA TRIPLE
 // ====================================================================
 
 void Nivel2::crearSueloTriple()
 {
+    // ... (resto de crearSueloTriple sin cambios)
     qreal posYSuelo = sceneH * 0.85;
     qreal alturaSuelo = sceneH * 0.15;
 
-    // *** CORRECCIÓN: AUMENTAR ANCHO DEL SUELO PARA COBERTURA EXTREMA (x5) ***
-    anchoSuelo = static_cast<int>(vistaAncho * 5.0);
+    // *** AUMENTAR ANCHO DEL SUELO PARA MAYOR COBERTURA ***
+    anchoSuelo = static_cast<int>(vistaAncho * 2.5);
 
     // Limpiar suelos previos
     if (suelo1) {
@@ -258,7 +262,6 @@ void Nivel2::crearSueloTriple()
 
     qDebug() << "Sistema de suelo TRIPLE creado. Ancho de cada suelo:" << anchoSuelo;
 }
-
 void Nivel2::actualizarSuelo(qreal posicionJugador)
 {
     // ... (resto de actualizarSuelo sin cambios)
@@ -311,12 +314,14 @@ void Nivel2::actualizarSuelo(qreal posicionJugador)
         suelo3->setX(nuevaPos);
     }
 }
+
 // ====================================================================
 // CONFIGURACIÓN INICIAL
 // ====================================================================
 
 void Nivel2::configurarNivel()
 {
+    // ... (resto de configurarNivel sin cambios)
     // Inicializar timer de daño
     if (!danoObstaculoTimer.isValid()) {
         danoObstaculoTimer.start();
@@ -330,7 +335,7 @@ void Nivel2::configurarNivel()
 
     // Crear jugador centrado
     qreal anchoJugador = sceneH * 0.15;
-    qreal altoJugador = sceneH * 0.30;
+    qreal altoJugador = sceneH * 0.15;
 
     int sceneW = this->sceneW;
 
@@ -442,6 +447,7 @@ void Nivel2::configurarNivel()
 
 void Nivel2::crearEnemigos()
 {
+    // ... (resto de crearEnemigos sin cambios)
     if (!jugador) return;
 
     qreal alturaSuelo = sceneH * 0.85;
@@ -495,6 +501,7 @@ void Nivel2::crearEnemigos()
 
 void Nivel2::crearObstaculos()
 {
+    // ... (resto de crearObstaculos sin cambios)
     qDebug() << "=== INICIALIZANDO SISTEMA DE CORREDOR INFINITO ===";
 
     // El suelo ya fue creado en crearSueloTriple()
@@ -513,6 +520,7 @@ void Nivel2::crearObstaculos()
 
 void Nivel2::spawnearObstaculoAleatorio()
 {
+    // ... (resto de spawnearObstaculoAleatorio sin cambios)
     qreal posYSuelo = sceneH * 0.85;
     qreal alturaJugador = sceneH * 0.15;
 
@@ -648,6 +656,7 @@ void Nivel2::spawnearObstaculoAleatorio()
 
 void Nivel2::limpiarObstaculosLejanos()
 {
+    // ... (resto de limpiarObstaculosLejanos sin cambios)
     if (!jugador) return;
 
     qreal limiteEliminacion = jugador->x() - vistaAncho * 1.5;
@@ -683,6 +692,7 @@ void Nivel2::limpiarObstaculosLejanos()
 
 void Nivel2::reposicionarEscena()
 {
+    // ... (resto de reposicionarEscena sin cambios)
     if (!jugador || !escena) return;
 
     qreal centroEscena = sceneW * 0.5;
@@ -918,6 +928,7 @@ void Nivel2::onJuegoTerminado()
 
 void Nivel2::manejarTecla(Qt::Key key)
 {
+    // ... (resto de manejarTecla sin cambios)
     if (!juegoEnPausa) return;
 
     if (key == Qt::Key_R) {
@@ -1002,5 +1013,17 @@ void Nivel2::manejarTecla(Qt::Key key)
     }
     else if (key == Qt::Key_Escape) {
         qDebug() << "Volver al menú...";
+    }
+}
+void Jugador::saltar()
+{
+    // CRÍTICO: Solo permite saltar si el personaje está en el suelo (onGround == true).
+    if (onGround) {
+        vy = -10;             // Setea la velocidad vertical para subir (valor negativo)
+        onGround = false;     // El jugador ya no está en el suelo
+        setAnimacion(EstadoAnimacion::SALTANDO);
+        qDebug() << "SALTO DISPARADO por llamada externa!";
+    } else {
+        // opcional: qDebug() << "Intento de salto, pero no está en el suelo.";
     }
 }

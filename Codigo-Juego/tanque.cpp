@@ -3,6 +3,7 @@
 #include <QBrush>
 #include <QGraphicsScene>
 #include <QDebug>
+#include <QPainter>
 
 Tanque::Tanque(qreal w,
                qreal h,
@@ -10,19 +11,19 @@ Tanque::Tanque(qreal w,
                qreal sceneHeight,
                qreal posicionX)
     : Persona(w, h, sceneWidth, sceneHeight, TipoMovimiento::RECTILINEO)
-    , tiempoEntreDisparos(3000)  // Dispara cada 3 segundos
-    , velocidadDescenso(3.0)      // Velocidad de caída más lenta que enemigos
+    , tiempoEntreDisparos(3000)
+    , velocidadDescenso(3.0)
+    , spriteItem(nullptr)
+    , spriteCargado(false)
 {
-    // Configurar vida especial para tanques
     setVida(5);
 
-    // Configurar apariencia (color distintivo)
-    setBrush(QBrush(QColor(139, 69, 19))); // Marrón oscuro para tanque
+    // Color de fallback (se oculta si se carga sprite)
+    setBrush(QBrush(QColor(139, 69, 19)));
 
-    // Determinar en qué lado está el tanque
     ladoIzquierdo = (posicionX < 0);
 
-    // Configurar movimiento descendente
+    // ✅ CRÍTICO: Configurar movimiento constante hacia abajo
     downPressed = true;
     upPressed = false;
     leftPressed = false;
@@ -33,7 +34,6 @@ Tanque::Tanque(qreal w,
     timerDisparo = new QTimer(this);
     connect(timerDisparo, &QTimer::timeout, this, &Tanque::disparar);
 
-    // Iniciar disparos después de 1 segundo (para que aparezca primero)
     QTimer::singleShot(1000, this, [this]() {
         if (estaVivo()) {
             timerDisparo->start(tiempoEntreDisparos);
@@ -42,7 +42,8 @@ Tanque::Tanque(qreal w,
 
     qDebug() << "Tanque creado en X:" << posicionX
              << "Lado izquierdo:" << ladoIzquierdo
-             << "Vida:" << getVida();
+             << "Vida:" << getVida()
+             << "Speed:" << speed;
 }
 
 Tanque::~Tanque()
@@ -52,18 +53,22 @@ Tanque::~Tanque()
     }
 }
 
+// ✅ SOLUCIÓN: Sobrescribir handleInput() para mantener movimiento constante
 void Tanque::handleInput()
 {
-    // Asegurar que el tanque siempre se mueve hacia abajo
+    // CRÍTICO: Mantener siempre el movimiento hacia abajo activo
     downPressed = true;
     upPressed = false;
     leftPressed = false;
     rightPressed = false;
 
-    // Debug periódico
+    // Debug periódico para verificar movimiento
     static int debugCounter = 0;
     if (debugCounter++ % 120 == 0) {
-        qDebug() << "Tanque en Y:" << y() << "Vida:" << getVida();
+        qDebug() << "🎮 Tanque - Y:" << y()
+                 << "Vida:" << getVida()
+                 << "downPressed:" << downPressed
+                 << "speed:" << speed;
     }
 }
 
@@ -76,20 +81,17 @@ void Tanque::disparar()
         return;
     }
 
-    qDebug() << "Tanque disparando desde posición:" << x() << y();
+    qDebug() << "💥 Tanque disparando desde posición:" << x() << y();
 
-    // Crear proyectil parabólico
     qreal anchoProyectil = 15;
     qreal altoProyectil = 15;
 
-    // Calcular posición inicial del proyectil (frente del tanque)
     QRectF rectTanque = boundingRect();
     QPointF posicionInicial = scenePos() + QPointF(
                                   rectTanque.width() / 2 - anchoProyectil / 2,
                                   rectTanque.height() / 2
                                   );
 
-    // Crear el proyectil
     ProyectilTanque* proyectil = new ProyectilTanque(
         anchoProyectil,
         altoProyectil,
@@ -103,5 +105,113 @@ void Tanque::disparar()
 
     scene()->addItem(proyectil);
 
-    qDebug() << "Proyectil de tanque creado en:" << posicionInicial;
+    qDebug() << "🚀 Proyectil de tanque creado en:" << posicionInicial;
+}
+
+// ========================================================================
+// 🎨 MÉTODO 1: Sprite como textura (Simple, compatible con código actual)
+// ========================================================================
+void Tanque::cargarSpriteTanque()
+{
+    QPixmap spriteTanque(":/Recursos/Tanque/Tanque.png");
+
+    if (spriteTanque.isNull()) {
+        qDebug() << "⚠️ No se pudo cargar sprite del tanque, usando color sólido";
+        setBrush(QBrush(QColor(139, 69, 19))); // Marrón oscuro como fallback
+        return;
+    }
+
+    // Escalar el sprite al tamaño del tanque
+    QPixmap spriteEscalado = spriteTanque.scaled(
+        boundingRect().width(),
+        boundingRect().height(),
+        Qt::KeepAspectRatio,
+        Qt::SmoothTransformation
+        );
+
+    // Aplicar el sprite como textura
+    QBrush texturaBrush(spriteEscalado);
+    setBrush(texturaBrush);
+
+    qDebug() << "✅ Sprite del tanque cargado como textura";
+}
+
+// ========================================================================
+// 🎨 MÉTODO 2: Sprite como QGraphicsPixmapItem hijo (Mejor calidad visual)
+// ========================================================================
+void Tanque::cargarSpriteComoPixmap()
+{
+    QPixmap spriteTanque(":/Recursos/Tanque/Tanque.png");
+
+    if (spriteTanque.isNull()) {
+        qDebug() << "⚠️ No se pudo cargar sprite del tanque";
+        return;
+    }
+
+    // Escalar el sprite
+    QPixmap spriteEscalado = spriteTanque.scaled(
+        boundingRect().width(),
+        boundingRect().height(),
+        Qt::KeepAspectRatio,
+        Qt::SmoothTransformation
+        );
+
+    // Si ya existe un sprite, eliminarlo primero
+    if (spriteItem) {
+        delete spriteItem;
+    }
+
+    // Crear un item de pixmap como hijo del tanque
+    spriteItem = new QGraphicsPixmapItem(spriteEscalado, this);
+    spriteItem->setPos(0, 0); // Posición relativa al tanque
+
+    // Hacer el rectángulo invisible para que solo se vea el sprite
+    setPen(Qt::NoPen);
+    setBrush(Qt::NoBrush);
+
+    qDebug() << "✅ Sprite del tanque cargado como QGraphicsPixmapItem";
+}
+
+// ========================================================================
+// 🎨 MÉTODO 3: Sobrescribir paint() para dibujar sprite directamente
+// ========================================================================
+void Tanque::paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget)
+{
+    // Si no hay sprite cargado, usar el método padre
+    if (!spriteCargado) {
+        Persona::paint(painter, option, widget);
+        return;
+    }
+
+    // Dibujar el sprite estático del tanque
+    painter->drawPixmap(0, 0, spriteEstaticoTanque);
+
+    // Opcional: Dibujar borde de debug
+    // painter->setPen(QPen(Qt::red, 2));
+    // painter->drawRect(boundingRect());
+}
+
+// Método auxiliar para cargar sprite con paint personalizado
+void Tanque::cargarSpriteCustomPaint(const QString& rutaSprite)
+{
+    spriteEstaticoTanque = QPixmap(rutaSprite);
+
+    if (spriteEstaticoTanque.isNull()) {
+        qDebug() << "⚠️ No se pudo cargar sprite:" << rutaSprite;
+        spriteCargado = false;
+        return;
+    }
+
+    // Escalar al tamaño del tanque
+    spriteEstaticoTanque = spriteEstaticoTanque.scaled(
+        boundingRect().width(),
+        boundingRect().height(),
+        Qt::KeepAspectRatio,
+        Qt::SmoothTransformation
+        );
+
+    spriteCargado = true;
+    update(); // Forzar redibujado
+
+    qDebug() << " Sprite del tanque cargado con paint() personalizado";
 }

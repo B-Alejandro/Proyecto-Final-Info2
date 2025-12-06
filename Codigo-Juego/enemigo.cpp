@@ -384,3 +384,28 @@ void Enemigo::dispararProyectil()
         qDebug() << "Enemigo disparó en:" << spawn;
     }
 }
+void Enemigo::cargarSpritesNivel1()
+{
+    // Ruta y configuracion para EnemigoN1.png
+    QString rutaBase = ":/Recursos/Sprites/EnemigoN1.png";
+
+    if (spriteSheet.load(rutaBase)) {
+        usarSprites = true;
+
+        // ** Configuración para EnemigoN1.png **
+        // Asumiendo que EnemigoN1.png es un solo frame
+        totalFrames = 1;
+        frameActual = 0;
+        // anchoSprite y altoSprite se usan por defecto de las dimensiones del objeto
+
+        if (timerAnimacion) {
+            timerAnimacion->setInterval(100);
+            reanudarAnimacion();
+        }
+
+        qDebug() << "Sprites del Enemigo Nivel 1 cargados:" << rutaBase;
+    } else {
+        qDebug() << "ERROR: No se pudo cargar el sprite del Enemigo Nivel 1:" << rutaBase;
+        usarSprites = false;
+    }
+}

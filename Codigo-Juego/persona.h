@@ -86,6 +86,8 @@ signals:
     void died(Persona* who);
 
 protected:
+
+
     // paint renderiza el sprite
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget) override;
 

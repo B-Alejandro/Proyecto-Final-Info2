@@ -1,14 +1,17 @@
-// ============ nivel1.h ============
 #ifndef NIVEL1_H
 #define NIVEL1_H
 
 #include "nivelbase.h"
 #include "persona.h"
 #include "GameOverScreen.h"
-#include "hudnivel1.h"
 #include "victoriascreen.h"
+#include "panelinfo.h" // ¡Recomendado! La enumeración AccionPausa::VolverMenu está aquí.
 
+// Declaraciones adelantadas
+class PanelInfo;
 class Tanque;
+class Enemigo;
+class Obstaculo;
 
 class Nivel1 : public NivelBase
 {
@@ -21,34 +24,39 @@ public:
     bool estaEnGameOver() const { return juegoEnPausa; }
     bool estaEnVictoria() const { return nivelGanado; }
 
+signals:
+    // 🔥 CRÍTICO: Señal para notificar a la clase Juego que el jugador quiere volver al menú.
+    void volverAMenuPrincipal();
+
 protected:
     void configurarNivel() override;
     void crearEnemigos() override;
     void crearObstaculos() override;
-    void actualizar() override;  // *** NUEVO: Override para actualizar HUD ***
+    void actualizar() override;
 
 private:
-
+    void configurarEscena();
     int vistaAncho;
     int vistaAlto;
 
     QList<Enemigo*> listaEnemigos;
     QList<Tanque*> listaTanques;
-    QList<Obstaculo*> listaObstaculosMoviles;  // *** NUEVO ***
+    QList<Obstaculo*> listaObstaculosMoviles;
 
     int spawnDelayMs = 2000;
     int spawnMargin = 120;
 
     // Sistema de Game Over y Victoria
     GameOverScreen* pantallaGameOver;
-    VictoriaScreen* pantallaVictoria;  // *** NUEVO ***
-    HUDNivel1* hud;  // *** NUEVO: Interfaz visual ***
+    VictoriaScreen* pantallaVictoria;
+    PanelInfo* infoPanel;
     bool juegoEnPausa;
-    bool nivelGanado;  // *** NUEVO ***
+    bool nivelGanado;
 
-    // *** NUEVO: Sistema de puntuación ***
+    // Sistema de puntuación y vida del jugador
     int puntosActuales;
     int puntosObjetivo;
+    int vidaJugadorActual;
 
     // Funciones de oleadas
     void spawnearOleada();
@@ -59,21 +67,28 @@ private:
     void revisarColision();
     void colisionDetectada(Enemigo* e);
     void colisionTanqueDetectada(Tanque* t);
-    void colisionObstaculoDetectada(Obstaculo* o);  // *** NUEVO ***
-
+    void colisionObstaculoDetectada(Obstaculo* o);
+void reiniciarNivel();
     // Estado del jugador
     void verificarEstadoJugador();
 
-    // *** NUEVO: Sistema de puntos ***
+    // Sistema de puntos
     void agregarPuntos(int cantidad);
     void verificarVictoria();
+    void actualizarInfoPanel();
+
+    qreal scrollOffset;
 
 private slots:
     void onEnemyDied(Persona* p);
     void onTankDied(Persona* p);
     void onJugadorMurio();
-    void onObstaculoDestruido(Obstaculo* obs);  // *** NUEVO ***
-    void onJugadorDaniado(int vidaActual, int vidaMax);  // *** NUEVO ***
+    void onObstaculoDestruido(Obstaculo* obs);
+    void onJugadorDaniado(int vidaActual, int vidaMax);
+
+    // 🔥 CRÍTICO: Slots para manejar la pausa y las acciones del menú de pausa
+    void manejarPausa();
+    void manejarAccionPausa(PanelInfo::AccionPausa accion);
 };
 
 #endif // NIVEL1_H

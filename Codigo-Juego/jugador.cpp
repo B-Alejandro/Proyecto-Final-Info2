@@ -242,3 +242,53 @@ void Jugador::keyReleaseEvent(QKeyEvent* event)
         }
     }
 }
+// ============ jugador.cpp ============
+// ... (código existente)
+
+/*
+  NUEVO: Carga la hoja de sprites para el Nivel 1.
+  Ruta: :/Recursos/Sprites/JugadorNivel1.png (Tamaño total: 1000x250).
+*/
+// ============ jugador.cpp ============
+// ... (código existente)
+
+/*
+  NUEVO: Carga la hoja de sprites para el Nivel 1.
+  Ruta: :/Recursos/Sprites/JugadorNivel1.png (Tamaño total: 1000x250).
+*/
+void Jugador::cargarSpritesNivel1()
+{
+    qDebug() << "=== CARGANDO SPRITES DEL JUGADOR: Nivel 1 ===";
+
+    QString ruta = ":/Recursos/Sprites/JugadorNivel1.png";
+    spriteSheet = QPixmap(ruta);
+
+    if (spriteSheet.isNull()) {
+        qDebug() << " ERROR: No se pudo cargar JugadorNivel1.png";
+        usarSprites = false;
+        return;
+    }
+
+    const int numFrames = 8;
+
+    // 1. **CORRECCIÓN: ANCHO DE AVANCE COMPLETO**
+    // El anchoSprite debe ser el ancho COMPLETO de un frame (125px)
+    // para que el avance en la hoja sea correcto.
+    anchoSprite = spriteSheet.width() / numFrames;
+    anchoSprite+=4;
+    // 2. La altura del frame es la altura total de la imagen
+    altoSprite = spriteSheet.height();
+
+    this->totalFrames = numFrames;
+    usarSprites = true;
+
+    // 🔥 NUEVA VARIABLE DE INSTANCIA (Asume que existe: qreal anchoSpriteReducido;)
+    // Usaremos una variable específica para el recorte visual si existe,
+    // o forzaremos el ancho en paint.
+    // Si no tienes una variable para el recorte visual, sigue al paso 2.
+
+    qDebug() << " Sprites de Nivel 1 cargados. Frame:" << anchoSprite << "x" << altoSprite << ", Total Frames:" << this->totalFrames;
+}
+
+// ... (resto del código)
+// ... (resto del código)

@@ -1,4 +1,4 @@
-QT += core gui
+QT += core gui multimedia
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17
@@ -22,8 +22,9 @@ SOURCES += \
     proyectil.cpp \
     proyectiltanque.cpp \
     tanque.cpp \
-    victoriascreen.cpp
-
+    victoriascreen.cpp \
+    menuprincipal.cpp \
+    panelinfo.cpp
 HEADERS += \
     Obstaculo.h \
     enemigo.h \
@@ -41,7 +42,9 @@ HEADERS += \
     proyectil.h \
     proyectiltanque.h \
     tanque.h \
-    victoriascreen.h
+    victoriascreen.h \
+    menuprincipal.h \
+    panelinfo.h# <-- MODIFICADO: Cambiado 'menu' por 'menuprincipal.h'
 
 FORMS +=
 
