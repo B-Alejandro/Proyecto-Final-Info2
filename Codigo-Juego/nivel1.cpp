@@ -17,7 +17,7 @@
 #include <QPixmap>
 #include <QTimer>
 #include <QMap> // Necesario para PanelInfo::actualizar
-
+#include "proyectil.h"
 Nivel1::Nivel1(Juego* juego, QObject* parent)
     : NivelBase(juego, 1, parent)
     , pantallaGameOver(nullptr)
@@ -26,7 +26,7 @@ Nivel1::Nivel1(Juego* juego, QObject* parent)
     , infoPanel(nullptr) // ¡NUEVO!
     , juegoEnPausa(false)
     , nivelGanado(false)
-    , puntosActuales(80)
+    , puntosActuales(0)
     , puntosObjetivo(100)
     , vidaJugadorActual(5) // ¡INICIALIZAR!
     , scrollOffset(0)
@@ -809,6 +809,7 @@ void Nivel1::manejarTecla(Qt::Key key)
         break;
 
     case Qt::Key_Space:
+        dispararProyectil();
         // TODO: Implementar ataque cuando esté listo
         qDebug() << "💥 Ataque (pendiente de implementación)";
         break;
@@ -1010,4 +1011,33 @@ void Nivel1::reiniciarNivel()
     spawnearOleada();
 
     qDebug() << "✅ Nivel reiniciado correctamente";
+}
+void Nivel1::dispararProyectil()
+{
+    if (!jugador || juegoEnPausa) return;
+
+    // Obtener la posición y tamaño del jugador para disparar desde el centro superior
+    qreal width = jugador->boundingRect().width();
+    qreal proyectilSize = 10;
+    qreal speed = 15.0;
+    int dirY = -1; // -1 indica dirección hacia arriba (Player shot)
+
+    qreal px = jugador->scenePos().x() + width / 2;
+    qreal py = jugador->scenePos().y() - proyectilSize / 2; // Dispara desde la parte superior del jugador
+
+    // Crear proyectil con la firma correcta (width, height, speed, dirY)
+    Proyectil* proyectil = new Proyectil(proyectilSize, proyectilSize, speed, dirY);
+    proyectil->setPos(px, py);
+    proyectil->setOwner(jugador); // CRÍTICO: Setear el dueño para evitar colisión con el jugador.
+
+    // Añadir a la lista y a la escena
+    listaProyectiles.append(proyectil);
+    escena->addItem(proyectil);
+
+    // CRÍTICO: Conectar la señal 'destroyed' para limpiar listaProyectiles cuando el proyectil se auto-elimina.
+    connect(proyectil, &QObject::destroyed, this, [this, proyectil](){
+        listaProyectiles.removeOne(proyectil);
+    });
+
+    qDebug() << "🔥 Proyectil disparado en (" << px << "," << py << ")";
 }

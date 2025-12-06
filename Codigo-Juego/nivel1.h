@@ -5,13 +5,14 @@
 #include "persona.h"
 #include "GameOverScreen.h"
 #include "victoriascreen.h"
-#include "panelinfo.h" // ¡Recomendado! La enumeración AccionPausa::VolverMenu está aquí.
+#include "panelinfo.h"
 
 // Declaraciones adelantadas
 class PanelInfo;
 class Tanque;
 class Enemigo;
 class Obstaculo;
+class Proyectil; // 🔥 AÑADIDO
 
 class Nivel1 : public NivelBase
 {
@@ -25,7 +26,6 @@ public:
     bool estaEnVictoria() const { return nivelGanado; }
 
 signals:
-    // 🔥 CRÍTICO: Señal para notificar a la clase Juego que el jugador quiere volver al menú.
     void volverAMenuPrincipal();
 
 protected:
@@ -42,6 +42,7 @@ private:
     QList<Enemigo*> listaEnemigos;
     QList<Tanque*> listaTanques;
     QList<Obstaculo*> listaObstaculosMoviles;
+    QList<Proyectil*> listaProyectiles; // 🔥 AÑADIDO: Lista para seguir los proyectiles
 
     int spawnDelayMs = 2000;
     int spawnMargin = 120;
@@ -62,13 +63,15 @@ private:
     void spawnearOleada();
     void gameTick();
     void cleanupOffscreen();
+    void dispararProyectil(); // 🔥 AÑADIDO: Declaración de la función de ataque
 
     // Colisiones
     void revisarColision();
     void colisionDetectada(Enemigo* e);
     void colisionTanqueDetectada(Tanque* t);
     void colisionObstaculoDetectada(Obstaculo* o);
-void reiniciarNivel();
+    void reiniciarNivel();
+
     // Estado del jugador
     void verificarEstadoJugador();
 
@@ -86,7 +89,7 @@ private slots:
     void onObstaculoDestruido(Obstaculo* obs);
     void onJugadorDaniado(int vidaActual, int vidaMax);
 
-    // 🔥 CRÍTICO: Slots para manejar la pausa y las acciones del menú de pausa
+    // Slots para manejar la pausa
     void manejarPausa();
     void manejarAccionPausa(PanelInfo::AccionPausa accion);
 };
