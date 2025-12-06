@@ -6,6 +6,7 @@ CONFIG += qt
 
 SOURCES += \
     Obstaculo.cpp \
+    coleccionable.cpp \
     enemigo.cpp \
     enemigointeligente.cpp \
     explosion.cpp \
@@ -28,6 +29,7 @@ SOURCES += \
 
 HEADERS += \
     Obstaculo.h \
+    coleccionable.h \
     enemigo.h \
     enemigointeligente.h \
     explosion.h \
