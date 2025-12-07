@@ -29,15 +29,16 @@ public:
     // MÉTODO 3: Custom - Sobrescribir paint() para control total
     void cargarSpriteCustomPaint(const QString& rutaSprite);
 
+    // 🔥 CORRECCIÓN: Hacer timer público para acceso desde Nivel1
+    QTimer* timerDisparo;
+
 protected:
-    // ✅ CRÍTICO: Sobrescribir handleInput() para mantener movimiento constante
     void handleInput() override;
 
     // Para MÉTODO 3: Sobrescribir paint
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget = nullptr) override;
 
 private:
-    QTimer* timerDisparo;
     int tiempoEntreDisparos;
     qreal velocidadDescenso;
     bool ladoIzquierdo;

@@ -1,6 +1,6 @@
-#include "enemigoInteligente.h"
+#include "enemigointeligente.h"
 #include "jugador.h"
-#include "proyectilInteligente.h"  // *** CAMBIADO ***
+#include "proyectilinteligente.h"
 #include <QGraphicsScene>
 #include <QDebug>
 #include <cmath>
@@ -21,8 +21,8 @@ EnemigoInteligente::EnemigoInteligente(qreal w,
     , jugadorDetectado(false)
     , jugadorDetectadoAnterior(false)
     , contadorDetecciones(0)
-    , intervaloDisparo(3000)      // Inicia lento (3 segundos)
-    , cantidadProyectiles(1)      // Inicia con 1 proyectil
+    , intervaloDisparo(3000)
+    , cantidadProyectiles(1)
     , areaDeteccionVisual(nullptr)
     , mostrarArea(false)
 {
@@ -61,6 +61,43 @@ EnemigoInteligente::~EnemigoInteligente()
     if (timerDisparo) {
         timerDisparo->stop();
     }
+}
+
+/*
+  *** NUEVO: Override de boundingRect para hitbox más pequeña ***
+  Reduce la hitbox al 60% del tamaño original para hacer más justo el juego
+*/
+QRectF EnemigoInteligente::boundingRect() const
+{
+    // Obtener el rectángulo original de Enemigo
+    QRectF rect = Enemigo::boundingRect();
+
+    // Reducir al 60% del tamaño (40% más pequeño)
+    qreal reduccion = 0.4; // 40% de reducción
+    qreal offsetX = rect.width() * reduccion / 2.0;
+    qreal offsetY = rect.height() * reduccion / 2.0;
+
+    return QRectF(
+        rect.x() + offsetX,
+        rect.y() + offsetY,
+        rect.width() * (1.0 - reduccion),
+        rect.height() * (1.0 - reduccion)
+        );
+}
+
+/*
+  *** NUEVO: Override de shape para colisión más precisa ***
+  Hace que la forma de colisión sea circular en lugar de cuadrada
+*/
+QPainterPath EnemigoInteligente::shape() const
+{
+    QPainterPath path;
+    QRectF rect = boundingRect();
+
+    // Crear una elipse que coincida con el boundingRect reducido
+    path.addEllipse(rect);
+
+    return path;
 }
 
 /*
@@ -154,9 +191,11 @@ bool EnemigoInteligente::detectarJugador()
     if (!jugador) return false;
 
     // Calcular centros de ambos objetos
+    // Usar el boundingRect original (no el reducido) para el centro visual
+    QRectF rectOriginal = Enemigo::boundingRect();
     QPointF centroEnemigo = scenePos() +
-                            QPointF(boundingRect().width() / 2,
-                                    boundingRect().height() / 2);
+                            QPointF(rectOriginal.width() / 2,
+                                    rectOriginal.height() / 2);
 
     QPointF centroJugador = jugador->scenePos() +
                             QPointF(jugador->boundingRect().width() / 2,
@@ -174,17 +213,17 @@ bool EnemigoInteligente::detectarJugador()
 }
 
 /*
-  ════════════════════════════════════════════════════════════
+  ══════════════════════════════════════════════════════════════
   🎯 EVENTO: JUGADOR DETECTADO - AUMENTAR AGRESIVIDAD
-  ════════════════════════════════════════════════════════════
+  ══════════════════════════════════════════════════════════════
 */
 void EnemigoInteligente::onJugadorDetectado()
 {
     contadorDetecciones++;
 
-    qDebug() << "\n╔══════════════════════════════════════════════════════╗";
+    qDebug() << "\n╔════════════════════════════════════════════════════╗";
     qDebug() << "║  🔴 JUGADOR DETECTADO - Detección #" << contadorDetecciones << "               ║";
-    qDebug() << "╚══════════════════════════════════════════════════════╝";
+    qDebug() << "╚════════════════════════════════════════════════════╝";
 
     actualizarAgresividad();
 
@@ -194,9 +233,9 @@ void EnemigoInteligente::onJugadorDetectado()
 
 void EnemigoInteligente::onJugadorPerdido()
 {
-    qDebug() << "\n╔══════════════════════════════════════════════════════╗";
+    qDebug() << "\n╔════════════════════════════════════════════════════╗";
     qDebug() << "║  🟢 JUGADOR PERDIDO - Total detecciones:" << contadorDetecciones << "         ║";
-    qDebug() << "╚══════════════════════════════════════════════════════╝\n";
+    qDebug() << "╚════════════════════════════════════════════════════╝\n";
 }
 
 /*
@@ -278,9 +317,11 @@ void EnemigoInteligente::dispararProyectiles()
     Jugador* jugador = obtenerJugador();
     if (!jugador) return;
 
+    // Usar el rectángulo original para el centro de disparo
+    QRectF rectOriginal = Enemigo::boundingRect();
     QPointF centroEnemigo = scenePos() +
-                            QPointF(boundingRect().width() / 2,
-                                    boundingRect().height() / 2);
+                            QPointF(rectOriginal.width() / 2,
+                                    rectOriginal.height() / 2);
 
     qDebug() << "   🔫 DISPARANDO" << cantidadProyectiles << "proyectil(es)";
 

@@ -23,6 +23,7 @@ public:
       tipo: tipo de movimiento (gravedad o rectilineo)
       nivel: nivel del juego que ajusta la IA
     */
+    QTimer* timerDisparo;
     Enemigo(qreal w,
             qreal h,
             qreal sceneWidth,
@@ -33,6 +34,7 @@ public:
     /*
       Carga sprites del enemigo y calcula frames.
     */
+      QTimer* aiTimer;
     void cargarSprites();
     void cargarSpritesNivel1();
     /*
@@ -81,7 +83,7 @@ private:
     void cambiarSpritePorEstado();
 
     // Timer para IA aleatoria
-    QTimer* aiTimer;
+
 
     // Tiempo entre cambios de direccion
     int changeDirectionTime;
@@ -102,7 +104,7 @@ private:
     QPixmap spriteMuerte;
 
     // Sistema de disparo
-    QTimer* timerDisparo;
+
     int tiempoEntreDisparos;
     void dispararProyectil();
 };

@@ -284,3 +284,58 @@ void Jugador::cargarSpritesNivel1()
 
     qDebug() << " Sprites de Nivel 1 cargados. Frame:" << anchoSprite << "x" << altoSprite << ", Total Frames:" << this->totalFrames;
 }
+
+void Jugador::cargarSpritesNivel3()
+{
+    qDebug() << "=== CARGANDO SPRITES DEL JUGADOR: Nivel 2+ ===";
+
+    QString rutaIdle = ":/Recursos/Sprites/Idle_jugador3.png";
+    QString rutaRun = ":/Recursos/Sprites/Run_jugador3.png";
+    QString rutaJump = ":/Recursos/Sprites/Jump_homeless.png";
+    QString rutaDeath = ":/Recursos/Sprites/Dead.png";
+
+    spriteIdle = QPixmap(rutaIdle);
+    spriteCorrer = QPixmap(rutaRun);
+    spriteSaltar = QPixmap(rutaJump);
+    spriteMuerte = QPixmap(rutaDeath);
+
+    if (spriteIdle.isNull()) {
+        qDebug() << " ERROR: No se pudo cargar" << rutaIdle;
+        spriteIdle = spriteCorrer;  // Fallback
+    } else {
+        qDebug() << " Sprite IDLE cargado:" << spriteIdle.width() << "x" << spriteIdle.height();
+    }
+
+    if (spriteCorrer.isNull()) {
+        qDebug() << " ERROR: No se pudo cargar" << rutaRun;
+        qDebug() << "     Verifica que el archivo existe en el .qrc";
+    } else {
+        qDebug() << " Sprite correr cargado:" << spriteCorrer.width() << "x" << spriteCorrer.height();
+    }
+
+    if (spriteSaltar.isNull()) {
+        qDebug() << " No se pudo cargar" << rutaJump << "- usando fallback";
+        spriteSaltar = spriteCorrer;
+    } else {
+        qDebug() << " Sprite saltar cargado:" << spriteSaltar.width() << "x" << spriteSaltar.height();
+    }
+
+    if (spriteMuerte.isNull()) {
+        qDebug() << " No se pudo cargar" << rutaDeath << "- usando fallback";
+        spriteMuerte = spriteCorrer;
+    } else {
+        qDebug() << " Sprite muerte cargado:" << spriteMuerte.width() << "x" << spriteMuerte.height();
+    }
+
+    // Iniciar con sprite IDLE
+    if (!spriteIdle.isNull()) {
+        // CORRECCIÓN 1: Establecer a 1 frame para detener el repintado en reposo
+        setSprite(rutaIdle, 128, 128, 1);
+        setAnimacion(EstadoAnimacion::IDLE);
+    } else if (!spriteCorrer.isNull()) {
+        setSprite(rutaRun, 128, 128, 8);
+        setAnimacion(EstadoAnimacion::IDLE);
+    }
+
+    qDebug() << "=== FIN CARGA DE SPRITES ===\n";
+}

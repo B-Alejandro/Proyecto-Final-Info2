@@ -1,12 +1,14 @@
-// ============ nivel3.h - CON COLECCIONABLES ============
+// ============ nivel3.h - COMPLETO Y CORREGIDO ============
 #ifndef NIVEL3_H
 #define NIVEL3_H
 
 #include "nivelbase.h"
 #include <QList>
 
-// Forward declaration
+// Forward declarations
 class Coleccionable;
+class PanelInfo;     // Para el HUD
+class VictoriaScreen; // Para la pantalla de victoria
 
 class Nivel3 : public NivelBase
 {
@@ -22,22 +24,35 @@ protected:
     void actualizar() override;
 
 private slots:
-    /**
-     * Slot que se ejecuta cuando el jugador recoge un coleccionable
-     */
     void onColeccionableRecolectado(Coleccionable* col);
 
 private:
-    /**
-     * Muestra el mensaje de victoria
-     */
     void mostrarVictoria();
+
+    /**
+     * Crea un muro rectangular simple (QGraphicsRectItem) con estilo urbano.
+     */
+    void crearMuro(qreal x, qreal y, qreal w, qreal h);
+
+    /**
+     * Crea elementos decorativos de fondo (líneas de calle).
+     */
+    void crearDecoraciones(); // <<< CORRECCIÓN: DECLARACIÓN AÑADIDA
 
     // Sistema de coleccionables
     QList<Coleccionable*> listaColeccionables;
     int coleccionablesRecolectados;
     int totalColeccionables;
     bool nivelGanado;
+
+    // Panel de Información
+    PanelInfo* infoPanel;
+
+    // Gestión de puntuación local
+    int puntuacionActual;
+
+    // Pantalla de Victoria
+    VictoriaScreen* victoriaScreen;
 };
 
 #endif // NIVEL3_H

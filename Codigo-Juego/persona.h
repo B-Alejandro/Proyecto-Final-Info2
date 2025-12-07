@@ -6,16 +6,10 @@
 #include <QKeyEvent>
 #include <QPixmap>
 #include <QRectF>
-#include <QObject> // Asegurar que QObject está incluido
-#include <QPainter> // Necesario para QPainter en paint()
+#include <QObject>
+#include <QPainter>
 #include <QStyleOptionGraphicsItem>
 #include <QWidget>
-
-/*
- * Persona.h
- * Clase base para entidades con movimiento, fisica y animacion por sprites.
- * Esta version declara boundingRect() para evitar warnings y errores de definicion fuera de linea.
- */
 
 enum class TipoMovimiento {
     RECTILINEO,
@@ -36,7 +30,6 @@ class Persona : public QObject, public QGraphicsRectItem
 public:
     void updateMovement();
 
-    // Sobrescribe boundingRect para que Qt use el tamaño del sprite
     QRectF boundingRect() const override;
 
     Persona(qreal w, qreal h, qreal sceneWidth, qreal sceneHeight, TipoMovimiento tipo);
@@ -83,16 +76,18 @@ public:
     double g;
     bool onGround;
 
+    // 🔥 CORRECCIÓN: Hacer timers públicos para acceso desde niveles
+    QTimer* timer;
+    QTimer* timerAnimacion;
+
 signals:
     void vidaCambiada(int vidaActual, int vidaMaxima);
     void murioPersona();
     void died(Persona* who);
 
 protected:
-    // paint renderiza el sprite
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget) override;
 
-    // metodos de control
     virtual void handleInput();
     void updateMovementRectilineo();
     void updateMovementConGravedad();
@@ -104,9 +99,6 @@ protected:
     double sceneH;
     double speed;
 
-    // timer de movimiento NO usado internamente; se gestiona desde NivelBase
-    QTimer* timer;
-
     // sistema de sprites
     QPixmap spriteSheet;
     int anchoSprite;
@@ -115,7 +107,6 @@ protected:
     int frameActual;
     bool usarSprites;
     EstadoAnimacion estadoActual;
-    QTimer* timerAnimacion;
     bool animacionPausada;
     bool mirandoIzquierda;
 

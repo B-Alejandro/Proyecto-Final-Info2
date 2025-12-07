@@ -11,7 +11,7 @@ Tanque::Tanque(qreal w,
                qreal sceneHeight,
                qreal posicionX)
     : Persona(w, h, sceneWidth, sceneHeight, TipoMovimiento::RECTILINEO)
-    , tiempoEntreDisparos(3000)
+    , tiempoEntreDisparos(500)
     , velocidadDescenso(3.0)
     , spriteItem(nullptr)
     , spriteCargado(false)
@@ -23,7 +23,7 @@ Tanque::Tanque(qreal w,
 
     ladoIzquierdo = (posicionX < 0);
 
-    // ✅ CRÍTICO: Configurar movimiento constante hacia abajo
+    //Configurar movimiento constante hacia abajo
     downPressed = true;
     upPressed = false;
     leftPressed = false;
@@ -34,8 +34,9 @@ Tanque::Tanque(qreal w,
     timerDisparo = new QTimer(this);
     connect(timerDisparo, &QTimer::timeout, this, &Tanque::disparar);
 
-    QTimer::singleShot(1000, this, [this]() {
+    QTimer::singleShot(200, this, [this]() {
         if (estaVivo()) {
+            disparar(); // ¡Disparo inmediato!
             timerDisparo->start(tiempoEntreDisparos);
         }
     });

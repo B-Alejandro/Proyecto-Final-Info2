@@ -32,7 +32,7 @@ Nivel1::Nivel1(Juego* juego, QObject* parent)
     , infoPanel(nullptr) // ¡NUEVO!
     , juegoEnPausa(false)
     , nivelGanado(false)
-    , puntosActuales(30)
+    , puntosActuales(0)
     , puntosObjetivo(100)
     , vidaJugadorActual(5) // ¡INICIALIZAR!
     , scrollOffset(0)
@@ -76,8 +76,8 @@ void Nivel1::configurarNivel()
     qreal posJugadorX = vistaAncho * 0.4;
     qreal alturaSuelo = sceneH * 0.4;
 
-    qreal anchoJugador = vistaAncho * 0.06;
-    qreal altoJugador = vistaAncho * 0.06;
+    qreal anchoJugador = vistaAncho * 0.04;
+    qreal altoJugador = vistaAncho * 0.04;
     qreal posJugadorY = alturaSuelo - altoJugador;
 
     // Crear jugador con movimiento RECTILINEO
@@ -85,6 +85,9 @@ void Nivel1::configurarNivel()
     jugador->setPos(posJugadorX, posJugadorY);
     jugador->setVida(5);
     vidaJugadorActual = 5;
+
+
+    jugador->setSpeed(7.0);
 
     // Cargar sprites del jugador
     if (jugador) {
@@ -99,17 +102,15 @@ void Nivel1::configurarNivel()
 
     escena->addItem(jugador);
 
-    // ** CORRECCIÓN 1: Configurar foco para el jugador **
+    // Configurar foco para el jugador
     jugador->setFlag(QGraphicsItem::ItemIsFocusable);
     jugador->setFocus();
-    // ---------------------------------------------------
-
 
     if (escena) {
         infoPanel = new PanelInfo(vistaAncho, nullptr);
         escena->addItem(infoPanel);
 
-        // 🔥 CRÍTICO: Conectar las señales del PanelInfo
+        // Conectar las señales del PanelInfo
         connect(infoPanel, &PanelInfo::pausaPresionada,
                 this, &Nivel1::manejarPausa);
         connect(infoPanel, &PanelInfo::accionPausaSeleccionada,
@@ -117,13 +118,12 @@ void Nivel1::configurarNivel()
 
         qDebug() << "✅ Señales de PanelInfo conectadas correctamente";
 
-        actualizarInfoPanel(); // Inicializar el contenido
+        actualizarInfoPanel();
 
         pantallaGameOver = new GameOverScreen(escena, this);
         pantallaVictoria = new VictoriaScreen(escena, this);
     }
 
-    qDebug() << "Jugador creado - Tamaño:" << anchoJugador << "x" << altoJugador;
 }
 
 // ... (crearEnemigos, spawnearOleada, gameTick sin cambios sustanciales) ...
@@ -257,7 +257,7 @@ void Nivel1::spawnearOleada()
                 obs->setVida(2);
                 obs->setVelocidad(4.0);
                 obs->setDanioColision(20);
-                obs->setBorderColor(Qt::black, 3);
+                obs->setTextura(":/Recursos/Objects/Obstaculos2.png", false);
 
                 listaObstaculosMoviles.append(obs);
                 escena->addItem(obs);
@@ -314,7 +314,7 @@ void Nivel1::spawnearOleada()
                     obs->setVida(2);
                     obs->setVelocidad(4.0);
                     obs->setDanioColision(20);
-                    obs->setBorderColor(Qt::black, 3);
+                    obs->setTextura(":/Recursos/Objects/Obstaculos2.png", false);
 
                     listaObstaculosMoviles.append(obs);
                     escena->addItem(obs);
@@ -404,7 +404,7 @@ void Nivel1::spawnearOleada()
                 obs->setVida(2);
                 obs->setVelocidad(4.0);
                 obs->setDanioColision(20);
-                obs->setBorderColor(Qt::black, 3);
+                obs->setTextura(":/Recursos/Objects/Obstaculos2.png", false);
 
                 listaObstaculosMoviles.append(obs);
                 escena->addItem(obs);
@@ -439,7 +439,7 @@ void Nivel1::spawnearOleada()
                 obs->setVida(2);
                 obs->setVelocidad(4.0);
                 obs->setDanioColision(20);
-                obs->setBorderColor(Qt::black, 3);
+                obs->setTextura(":/Recursos/Objects/Obstaculos2.png", false);
 
                 listaObstaculosMoviles.append(obs);
                 escena->addItem(obs);
@@ -793,27 +793,101 @@ void Nivel1::onEnemyDied(Persona* p)
     Enemigo* e = dynamic_cast<Enemigo*>(p);
     if (!e) return;
 
+
+    // 1. Detener TODOS los timers del enemigo INMEDIATAMENTE
+    if (e->timerDisparo) {
+        e->timerDisparo->stop();
+        e->timerDisparo->disconnect();
+    }
+    if (e->aiTimer) {
+        e->aiTimer->stop();
+        e->aiTimer->disconnect();
+    }
+    if (e->timerAnimacion) {
+        e->timerAnimacion->stop();
+        e->timerAnimacion->disconnect();
+    }
+    if (e->timer) {
+        e->timer->stop();
+        e->timer->disconnect();
+    }
+
+    // 2. Desconectar TODAS las señales para evitar llamadas después de eliminación
+    e->disconnect();
+
+    // 3. Remover de la lista ANTES de eliminar
     listaEnemigos.removeOne(e);
+
+    // 4. Agregar puntos
     agregarPuntos(5);
+
+    // 5. Remover de la escena INMEDIATAMENTE
+    if (escena && escena->items().contains(e)) {
+        escena->removeItem(e);
+    }
+
+    // 6. Eliminar el objeto de forma segura
+    e->deleteLater();
 }
 
+// 🔥 CORRECCIÓN: Slot para cuando un tanque muere
 void Nivel1::onTankDied(Persona* p)
 {
     Tanque* t = dynamic_cast<Tanque*>(p);
     if (!t) return;
 
+    qDebug() << "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+    qDebug() << "💀 TANQUE MURIÓ - Iniciando eliminación";
+
+    // 1. Detener TODOS los timers del tanque INMEDIATAMENTE
+    if (t->timerDisparo) {
+        t->timerDisparo->stop();
+        t->timerDisparo->disconnect();
+    }
+    if (t->timerAnimacion) {
+        t->timerAnimacion->stop();
+        t->timerAnimacion->disconnect();
+    }
+    if (t->timer) {
+        t->timer->stop();
+        t->timer->disconnect();
+    }
+
+    // 2. Desconectar TODAS las señales
+    t->disconnect();
+
+    // 3. Remover de la lista ANTES de eliminar
     listaTanques.removeOne(t);
+
+    // 4. Agregar puntos
     agregarPuntos(10);
+
+    // 5. Remover de la escena INMEDIATAMENTE
+    if (escena && escena->items().contains(t)) {
+        escena->removeItem(t);
+    }
+
+    // 6. Eliminar el objeto de forma segura
+    t->deleteLater();
 }
 
 void Nivel1::onObstaculoDestruido(Obstaculo* obs)
 {
     if (!obs) return;
 
+
+    // 1. Remover de la lista ANTES de eliminar
     listaObstaculosMoviles.removeOne(obs);
+
+    // 2. Agregar puntos
     agregarPuntos(3);
 
-    escena->removeItem(obs);
+    // 3. Remover de la escena INMEDIATAMENTE
+    if (escena && escena->items().contains(obs)) {
+        escena->removeItem(obs);
+    }
+
+    // 4. Eliminar el objeto de forma segura
     obs->deleteLater();
 }
 

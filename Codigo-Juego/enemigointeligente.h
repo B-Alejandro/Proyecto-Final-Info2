@@ -4,6 +4,7 @@
 #include "enemigo.h"
 #include <QGraphicsEllipseItem>
 #include <QTimer>
+#include <QPainterPath>
 
 /*
   Clase EnemigoInteligente - TORRETA ESTÁTICA
@@ -14,6 +15,8 @@
   - Detección 2: Disparo normal (2s) - 1 proyectil
   - Detección 3: Disparo rápido (1.5s) - 2 proyectiles
   - Detección 4+: Disparo muy rápido (1s) - 3 proyectiles
+
+  HITBOX REDUCIDA: 60% del tamaño original para mejor jugabilidad
 */
 
 class EnemigoInteligente : public Enemigo
@@ -38,6 +41,10 @@ public:
     int getContadorDetecciones() const { return contadorDetecciones; }
     void reiniciarContador() { contadorDetecciones = 0; }
     void mostrarAreaDeteccion(bool mostrar);
+
+    // *** NUEVOS: Overrides para hitbox más pequeña ***
+    QRectF boundingRect() const override;
+    QPainterPath shape() const override;
 
 protected:
     void advance(int phase) override;

@@ -18,6 +18,7 @@ public:
     // Metodo para activar animacion de muerte
     void activarAnimacionMuerte();
 void cargarSpritesNivel1();
+    void cargarSpritesNivel3();
 protected:
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;

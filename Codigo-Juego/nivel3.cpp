@@ -1,26 +1,33 @@
-// ============ nivel3.cpp - CON COLECCIONABLES Y VICTORIA ============
+// ============ nivel3.cpp - COMPLETO Y CORREGIDO (Estética Urbana) ============
 #include "nivel3.h"
 #include "juego.h"
 #include "jugador.h"
 #include "enemigointeligente.h"
 #include "coleccionable.h"
+#include "panelinfo.h"
+#include "victoriascreen.h"
 #include <QDebug>
 #include <QTimer>
+#include <QGraphicsRectItem>
+#include <QMap>
+#include <QGraphicsDropShadowEffect>
 
 Nivel3::Nivel3(Juego* juego, QObject* parent)
     : NivelBase(juego, 3, parent)
     , coleccionablesRecolectados(0)
-    , totalColeccionables(5)
+    , totalColeccionables(7)
     , nivelGanado(false)
+    , infoPanel(nullptr)
+    , puntuacionActual(0)
+    , victoriaScreen(nullptr)
 {
-    // Crear escena grande para tener espacio
-    int ancho = juego->getVistaAncho() ;  // Más espacio horizontal
+    int ancho = juego->getVistaAncho();
     int alto = juego->getVistaAlto();
 
     crearEscena(ancho, alto);
 
     qDebug() << "\n╔════════════════════════════════════════════════════╗";
-    qDebug() << "║  NIVEL 3: RECOLECTA Y ESCAPA                      ║";
+    qDebug() << "║  NIVEL 3: EL LABERINTO Y LA CAZA (ESTÉTICA URBANA)  ║";
     qDebug() << "╚════════════════════════════════════════════════════╝\n";
 }
 
@@ -28,107 +35,190 @@ void Nivel3::configurarNivel()
 {
     qDebug() << "⚙️  Configurando nivel...";
 
-    // Crear jugador MÁS PEQUEÑO en la esquina inferior izquierda
-    qreal posJugadorX = sceneW * 0.15;
-    qreal posJugadorY = sceneH * 0.7;
+    // FONDO GRIS OSCURO (Asfalto/Calle)
+    if (escena) {
+        escena->setBackgroundBrush(QBrush(QColor(40, 40, 40)));
+        qDebug() << "✓ Fondo cambiado a gris oscuro (Estética urbana).";
+    }
+
+    // Crear jugador
+    qreal posJugadorX = sceneW * 0.05;
+    qreal posJugadorY = sceneH * 0.5;  // Posición central vertical
 
     crearJugador(posJugadorX, posJugadorY, TipoMovimiento::RECTILINEO);
 
     if (jugador) {
-        // *** REDUCIR TAMAÑO: 50% más pequeño ***
         qreal escala = 0.5;
         jugador->setScale(escala);
-
-        jugador->setSpeed(7.0);
+        jugador->setSpeed(6.0);
         jugador->setVida(100);
-        qDebug() << "✓ Jugador creado (TAMAÑO REDUCIDO 50%)";
-        qDebug() << "  Posición:" << posJugadorX << posJugadorY;
-        qDebug() << "  Velocidad:" << jugador->getSpeed();
+
+        // Cargar sprites de Nivel 3
+        jugador->cargarSpritesNivel3();
+
+        qDebug() << "✓ Jugador creado (TAMAÑO REDUCIDO 50%) con sprites de Nivel 3";
+    }
+
+    // CREACIÓN DE HUD Y PANTALLA DE VICTORIA
+    infoPanel = new PanelInfo(juego->getVistaAncho());
+    if (escena) {
+        escena->addItem(infoPanel);
+        infoPanel->setZValue(100);
+    }
+    infoPanel->setBotonPausaVisible(false);
+
+    if (escena) {
+        victoriaScreen = new VictoriaScreen(escena, this);
+        qDebug() << "✓ Pantalla de Victoria creada.";
+    }
+
+    // Primera actualización del HUD
+    if (jugador && infoPanel) {
+        QMap<QString, QString> hudData;
+        hudData["VIDA"] = QString::number(jugador->getVida());
+        hudData["PUNTAJE"] = QString::number(puntuacionActual);
+        hudData["COLECCIONABLES"] = QString("%1/%2")
+                                        .arg(coleccionablesRecolectados)
+                                        .arg(totalColeccionables);
+        infoPanel->actualizar(hudData);
     }
 }
 
 void Nivel3::crearEnemigos()
 {
-    qDebug() << "\n🤖 Creando Enemigo Inteligente...";
+    qDebug() << "\n🤖 Creando Múltiples Enemigos Inteligentes...";
 
-    // *** TAMAÑO REDUCIDO: 50% más pequeño ***
-    qreal sizeEnemigo = sceneH * 0.06;  // Era 0.12, ahora 0.06
+    qreal sizeEnemigo = sceneH * 0.04;
+    qreal radioDeteccion = 180.0;  // Aumentado ligeramente para compensar
+    int numEnemigos = 4;
 
-    // Enemigo centinela
-    EnemigoInteligente* centinela = new EnemigoInteligente(
-        sizeEnemigo,
-        sizeEnemigo,
-        sceneW,
-        sceneH,
-        TipoMovimiento::RECTILINEO,
-        3,
-        250.0  // Radio de detección reducido
-        );
+    // *** POSICIONES ESTRATÉGICAS ALEJADAS DE MUROS ***
+    QList<QPointF> posiciones = {
+        {sceneW * 0.35, sceneH * 0.15},  // Superior centro-izquierda (alejado del muro superior)
+        {sceneW * 0.65, sceneH * 0.2},   // Superior centro-derecha (alejado de muros)
+        {sceneW * 0.5, sceneH * 0.6},    // Centro (zona abierta)
+        {sceneW * 0.8, sceneH * 0.45}    // Derecha centro (alejado del muro derecho)
+    };
 
-    // Posicionar en el centro
-    centinela->setPos(sceneW * 0.5, sceneH * 0.5);
-    centinela->setVida(50);
-    centinela->setSpeed(0);
-    centinela->mostrarAreaDeteccion(true);
-    centinela->setBrush(QBrush(QColor(100, 100, 255)));
+    for (int i = 0; i < numEnemigos; ++i) {
+        EnemigoInteligente* enemigo = new EnemigoInteligente(
+            sizeEnemigo,
+            sizeEnemigo,
+            sceneW,
+            sceneH,
+            TipoMovimiento::RECTILINEO,
+            3,
+            radioDeteccion
+            );
 
-    if (escena) escena->addItem(centinela);
-    enemigos.append(centinela);
+        enemigo->setPos(posiciones[i]);
+        enemigo->setVida(30);
+        enemigo->setSpeed(0);  // Mantener estáticos (torretas)
+        enemigo->mostrarAreaDeteccion(true);  // *** MOSTRAR área de detección ***
+        enemigo->setBrush(QBrush(QColor(255, 50, 50)));
 
-    qDebug() << "✓ Centinela creado (TAMAÑO REDUCIDO 50%):";
-    qDebug() << "  Posición:" << centinela->pos();
-    qDebug() << "  Radio detección:" << centinela->getRadioDeteccion() << "px";
+        if (escena) escena->addItem(enemigo);
+        enemigos.append(enemigo);
+
+        qDebug() << "✓ Enemigo " << i + 1 << " creado (TORRETA):"
+                 << " Posición:" << enemigo->pos()
+                 << " Radio detección:" << radioDeteccion;
+    }
     qDebug() << "";
+}
+
+void Nivel3::crearMuro(qreal x, qreal y, qreal w, qreal h)
+{
+    QGraphicsRectItem* muro = new QGraphicsRectItem(x, y, w, h);
+    muro->setBrush(QBrush(QColor(80, 80, 80)));
+    muro->setPen(QPen(QColor(100, 100, 100), 2));
+
+    QGraphicsDropShadowEffect* shadow = new QGraphicsDropShadowEffect();
+    shadow->setBlurRadius(10);
+    shadow->setColor(QColor(0, 0, 0, 150));
+    shadow->setOffset(5, 5);
+    muro->setGraphicsEffect(shadow);
+
+    if (escena) escena->addItem(muro);
+}
+
+void Nivel3::crearDecoraciones()
+{
+    qDebug() << "✓ Decoraciones de fondo preparadas.";
 }
 
 void Nivel3::crearObstaculos()
 {
-    qDebug() << "🌟 Creando coleccionables...\n";
+    qDebug() << "🧱 Creando laberinto y coleccionables...";
 
-    // Coleccionable 1
-    Coleccionable* col1 = new Coleccionable(sceneW * 0.2, sceneH * 0.3, 20.0, 0);
-    escena->addItem(col1);
-    listaColeccionables.append(col1);
-    connect(col1, &Coleccionable::coleccionableRecolectado,
-            this, &Nivel3::onColeccionableRecolectado);
+    // --- 1. Crear Laberinto (Muros) - DISEÑO OPTIMIZADO ---
+    qreal wallW = sceneW * 0.02;
+    qreal wallH = sceneH * 0.02;
 
-    // Coleccionable 2
-    Coleccionable* col2 = new Coleccionable(sceneW * 0.2, sceneH * 0.2, 20.0, 1);
-    escena->addItem(col2);
-    listaColeccionables.append(col2);
-    connect(col2, &Coleccionable::coleccionableRecolectado,
-            this, &Nivel3::onColeccionableRecolectado);
+    // Muro superior horizontal (completo)
+    crearMuro(sceneW * 0.1, sceneH * 0.1, sceneW * 0.8, wallH);
 
-    // Coleccionable 3
-    Coleccionable* col3 = new Coleccionable(sceneW * 0.2, sceneH * 0.4, 20.0, 2);
-    escena->addItem(col3);
-    listaColeccionables.append(col3);
-    connect(col3, &Coleccionable::coleccionableRecolectado,
-            this, &Nivel3::onColeccionableRecolectado);
+    // Muro vertical izquierdo (altura moderada)
+    crearMuro(sceneW * 0.25, sceneH * 0.1, wallW, sceneH * 0.5);
 
-    // Coleccionable 4
-    Coleccionable* col4 = new Coleccionable(sceneW * 0.2, sceneH * 0.8, 20.0, 0);
-    escena->addItem(col4);
-    listaColeccionables.append(col4);
-    connect(col4, &Coleccionable::coleccionableRecolectado,
-            this, &Nivel3::onColeccionableRecolectado);
+    // *** Muro vertical derecho MÁS CORTO para permitir acceso superior ***
+    crearMuro(sceneW * 0.75, sceneH * 0.25, wallW, sceneH * 0.3);
 
-    // Coleccionable 5
-    Coleccionable* col5 = new Coleccionable(sceneW * 0.2, sceneH * 0.1, 20.0, 1);
-    escena->addItem(col5);
-    listaColeccionables.append(col5);
-    connect(col5, &Coleccionable::coleccionableRecolectado,
-            this, &Nivel3::onColeccionableRecolectado);
+    // Muro inferior horizontal (con gap en el centro)
+    crearMuro(sceneW * 0.1, sceneH * 0.85, sceneW * 0.3, wallH);
+    crearMuro(sceneW * 0.6, sceneH * 0.85, sceneW * 0.3, wallH);
 
-    qDebug() << "✓ 5 coleccionables creados\n";
+    // Muro central horizontal (para crear pasillo)
+    crearMuro(sceneW * 0.35, sceneH * 0.5, sceneW * 0.3, wallH);
+
+    qDebug() << "✓ Laberinto creado con múltiples pasillos.";
+
+    // --- 2. Crear Coleccionables (Total 7) - DISTRIBUIDOS ESTRATÉGICAMENTE ---
+    qreal colSize = 25.0;
+    QColor colorColeccionable = QColor(255, 200, 0);
+
+    QList<QPointF> posicionesCol = {
+        // Zona superior
+        {sceneW * 0.15, sceneH * 0.15},   // Superior izquierda (arriba del muro)
+        {sceneW * 0.85, sceneH * 0.15},   // Superior derecha (accesible por arriba)
+
+        // Zona media
+        {sceneW * 0.15, sceneH * 0.4},    // Medio izquierda (entre muros)
+        {sceneW * 0.5, sceneH * 0.35},    // Centro superior (zona abierta)
+        {sceneW * 0.85, sceneH * 0.4},    // Medio derecha (accesible por el gap)
+
+        // Zona inferior
+        {sceneW * 0.15, sceneH * 0.7},    // Inferior izquierda
+        {sceneW * 0.85, sceneH * 0.7}     // Inferior derecha
+    };
+
+    int i = 0;
+    for (const QPointF& pos : posicionesCol) {
+        Coleccionable* col = new Coleccionable(pos.x(), pos.y(), colSize, i % 3);
+        col->setFillColor(colorColeccionable);
+
+        escena->addItem(col);
+        listaColeccionables.append(col);
+        connect(col, &Coleccionable::coleccionableRecolectado,
+                this, &Nivel3::onColeccionableRecolectado);
+        i++;
+    }
+
+    qDebug() << "✓ " << totalColeccionables << " coleccionables distribuidos estratégicamente.";
+    qDebug() << "✓ Rutas de acceso:";
+    qDebug() << "   - Pasillo superior completo";
+    qDebug() << "   - Gap en muro derecho para acceso lateral";
+    qDebug() << "   - Gap central en muro inferior";
+    qDebug() << "   - Todos los coleccionables son 100% accesibles.\n";
 }
 
 // ════════════════════════════════════════════════════════════
-//  ACTUALIZACIÓN POR FRAME
+// ACTUALIZACIÓN POR FRAME
 // ════════════════════════════════════════════════════════════
 void Nivel3::actualizar()
 {
-    if (nivelGanado) return;
+    // Si el nivel está ganado o la pantalla de victoria está visible, detener la lógica del juego
+    if (nivelGanado || (victoriaScreen && victoriaScreen->estaVisible())) return;
 
     NivelBase::actualizar();
 
@@ -142,35 +232,43 @@ void Nivel3::actualizar()
             col->verificarColision();
         }
     }
+
+    // Actualizar el panel en cada frame
+    if (jugador && infoPanel) {
+        QMap<QString, QString> hudData;
+        hudData["VIDA"] = QString::number(jugador->getVida());
+        hudData["PUNTAJE"] = QString::number(puntuacionActual);
+        hudData["COLECCIONABLES"] = QString("%1/%2")
+                                        .arg(coleccionablesRecolectados)
+                                        .arg(totalColeccionables);
+        infoPanel->actualizar(hudData);
+    }
 }
 
+// ════════════════════════════════════════════════════════════
+// 🎯 SISTEMA DE COLECCIONABLES Y VICTORIA
+// ════════════════════════════════════════════════════════════
 
-// ════════════════════════════════════════════════════════════
-// 🎯 SISTEMA DE COLECCIONABLES
-// ════════════════════════════════════════════════════════════
 void Nivel3::onColeccionableRecolectado(Coleccionable* col)
 {
     if (!col) return;
 
     coleccionablesRecolectados++;
+    puntuacionActual += 100;
 
-    qDebug() << "\n╔════════════════════════════════════════════════════╗";
-    qDebug() << "║  ✨ COLECCIONABLE RECOLECTADO!                     ║";
+    qDebug() << "╔════════════════════════════════════════════════════╗";
+    qDebug() << "║             ✨ Coleccionable Recolectado!          ║";
     qDebug() << "╚════════════════════════════════════════════════════╝";
     qDebug() << "   📊 Progreso:" << coleccionablesRecolectados << "/" << totalColeccionables;
 
-    // Eliminar de la lista de forma segura
     listaColeccionables.removeOne(col);
 
-    // Eliminar de la escena
     if (escena) {
         escena->removeItem(col);
     }
 
-    // Programar eliminación del objeto
     col->deleteLater();
 
-    // Verificar victoria
     if (coleccionablesRecolectados >= totalColeccionables) {
         nivelGanado = true;
         mostrarVictoria();
@@ -182,17 +280,18 @@ void Nivel3::onColeccionableRecolectado(Coleccionable* col)
 
 void Nivel3::mostrarVictoria()
 {
+    if (victoriaScreen) {
+        victoriaScreen->mostrar(puntuacionActual);
+    }
+
     qDebug() << "\n";
     qDebug() << "╔════════════════════════════════════════════════════╗";
     qDebug() << "║                                                    ║";
     qDebug() << "║          ★ ★ ★  ¡VICTORIA!  ★ ★ ★                ║";
     qDebug() << "║                                                    ║";
-    qDebug() << "║  ¡Has recolectado todos los objetos!              ║";
+    qDebug() << "║  ¡Has recolectado todos los objetos!               ║";
     qDebug() << "║                                                    ║";
-    qDebug() << "║  🎉 ¡NIVEL COMPLETADO! 🎉                         ║";
+    qDebug() << "║  🎉 ¡NIVEL COMPLETADO! 🎉                          ║";
     qDebug() << "║                                                    ║";
-    qDebug() << "╚════════════════════════════════════════════════════╝\n";
-
-    // Opcional: Detener el juego o mostrar pantalla de victoria
-    // Por ahora solo mostramos el mensaje
+    qDebug() << "╚════════════════════════════════════════════════════╝";
 }

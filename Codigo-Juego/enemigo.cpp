@@ -32,16 +32,19 @@ Enemigo::Enemigo(qreal w,
     canJump = true;
 
     // *** Configurar sistema de disparo ***
-    tiempoEntreDisparos = 2000; // Dispara cada 2 segundos
+    tiempoEntreDisparos = 3500; // Dispara cada 3 segundos
     timerDisparo = new QTimer(this);
     connect(timerDisparo, &QTimer::timeout, this, &Enemigo::intentarDisparar);
 
     // Iniciar disparos después de medio segundo, solo si es Nivel 1
-    QTimer::singleShot(500, this, [this]() {
-        if (estaVivo() && numeroNivel == 1) {
-            timerDisparo->start(tiempoEntreDisparos);
-        }
-    });
+    if (numeroNivel == 1) {
+        QTimer::singleShot(300, this, [this]() {
+            if (estaVivo()) {
+                dispararProyectil(); // ¡Disparo inmediato!
+                timerDisparo->start(tiempoEntreDisparos);
+            }
+        });
+    }
 
     aiTimer = new QTimer(this);
     connect(aiTimer, &QTimer::timeout, this, &Enemigo::changeDirection);
@@ -54,7 +57,7 @@ Enemigo::Enemigo(qreal w,
         rightPressed = false;
         downPressed = true;  // Siempre moviéndose hacia abajo
 
-        speed = 5.0; // Velocidad de IA simple
+        speed = 1.8; // Velocidad de IA simple
         setVida(3); // Vida baja
 
         // CORRECCIÓN FLICKERING 2: FORZAR BROCHA TRANSPARENTE
@@ -412,7 +415,7 @@ void Enemigo::dispararProyectil()
 
     qreal projW = 10;
     qreal projH = 16;
-    qreal projSpeed = 8.0;
+    qreal projSpeed = 6.0;
     int dirY = 1; // *** HACIA ABAJO (Nivel 1 es descendente) ***
 
     Proyectil* bala = new Proyectil(projW, projH, projSpeed, dirY);
